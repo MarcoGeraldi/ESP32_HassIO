@@ -4,3 +4,6 @@
 [submodule "arduino_tinyCLI"]
 	path = arduino_tinyCLI
 	url = https://github.com/MarcoGeraldi/arduino_tinyCLI.git
+[submodule "lib/parson"]
+	path = lib/parson
+	url = https://github.com/kgabis/parson.git
