@@ -1,0 +1,6 @@
+[submodule "lib/arduino_tinyCLI"]
+	path = lib/arduino_tinyCLI
+	url = https://github.com/MarcoGeraldi/arduino_tinyCLI.git
+[submodule "arduino_tinyCLI"]
+	path = arduino_tinyCLI
+	url = https://github.com/MarcoGeraldi/arduino_tinyCLI.git
