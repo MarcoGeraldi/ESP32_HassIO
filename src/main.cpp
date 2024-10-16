@@ -9,7 +9,7 @@ tinyCLI::Command commands[] = {
     {CLI_MQTT_PORT,             "Set MQTT broker port"          , cli_mqtt_port},
     {CLI_MQTT_USER,             "Set MQTT username"             , cli_mqtt_user},
     {CLI_MQTT_PASSWORD,         "Set MQTT password"             , cli_mqtt_password},   
-    {CLI_WIFI_CONFIG_PORTAL,    "Enable Config Portal"             , cli_config_portal},
+    {CLI_WIFI_CONFIG_PORTAL,    "Enable Config Portal"          , cli_config_portal},
     {CLI_WIFI_SSID,             "Set WiFi SSID"                 , nullptr},
     {CLI_WIFI_PSWD,             "Set WiFi Password"             , nullptr},
 
@@ -36,6 +36,9 @@ void setup() {
 
     /* --------------------- Initialize WiFi Manager Object --------------------- */
     wm_init(false); 
+
+    /* -------------------------- Initialize IoT Device ------------------------- */
+    IoT_device_init();
 }
 
 void loop() {
@@ -53,7 +56,7 @@ void loop() {
     /* ------------------------------ MQTT Process ------------------------------ */
     if (!mqttClient.connected()){
       /* --------------------- Try to reconnect to MQTT Broker -------------------- */
-      if ( millis() - timestamp  > 5000) {
+      if ( 0 == ( (millis() - timestamp)  % 5000) ) {
           MQTT_reconnect();   
           timestamp = millis();
         }
@@ -62,7 +65,15 @@ void loop() {
         mqttClient.loop();
         mqttClient.publish("esp32/temperature", "19°C");
     } 
-  }  
+  } 
+
+  if ( 0 == ( (millis() - timestamp)  % 1000) ) {
+    mySwitch->setStatus(rand());
+    Serial.println(mySwitch->getStatus());
+  }
+
+
+  /* -------------------------- Update MQTT Entities -------------------------- */
 }
 
 ////////////////////////////////////////////////////////////////////////////////////
@@ -177,4 +188,19 @@ void MQTT_reconnect() {
       Serial.print(mqttClient.state());
     }
   }
+}
+
+int randomInt(){
+  return rand();
+}
+const char* randomBool(){
+  if (rand()%2) return "ON"; else return "OFF";
+}
+
+void IoT_device_init(){
+  JsonDocument mySwitchInit;
+  
+  myIoTdevice.addEntity(mySwitch);
+
+
 }

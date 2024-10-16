@@ -10,6 +10,7 @@
 #include <PubSubClient.h>
 #include "definitions.h"
 #include "iot_cli.h"
+#include "IoT_device.h"
 
 /* -------------------------------------------------------------------------- */
 /*                                   Macros                                   */
@@ -46,6 +47,11 @@ Preferences preferences;
 WiFiClient espClient;
 PubSubClient mqttClient(espClient);
 
+/* ------------------------------- IoT Device ------------------------------- */
+Device myIoTdevice;
+auto mySwitch = std::make_shared<Switch>("mySwitch");
+//Switch mySwitch("mySwitch");
+
 /* -------------------------------------------------------------------------- */
 /*                               Data Structures                              */
 /* -------------------------------------------------------------------------- */
@@ -66,5 +72,10 @@ void saveConfigCallback ();
 void MQTT_paramInit();
 void MQTT_callback(char* topic, byte* message, unsigned int length) ;
 void MQTT_reconnect();
+
+void IoT_device_init();
+
+int randomInt();
+const char* randomBool();
 
 #endif
