@@ -9,22 +9,27 @@
 /* -------------------------------------------------------------------------- */
 /*                              HELPER FUNCTIONS                              */
 /* -------------------------------------------------------------------------- */
-String stringSnakeCase(const std::string& entityName) {
-    String output;
-    output.reserve(entityName.length());  // Pre-alloca spazio per ottimizzare
+String stringSnakeCase(const String& entityName) {
+    String output = "";
 
-    for (char ch : entityName) {
-        if (ch == ' ') {
-            output += '_';
+    for (char currentChar : entityName) {
+        if (currentChar == ' ') {
+            output += "_";  // Replace space with underscore
         } else {
-            output += std::tolower(static_cast<unsigned char>(ch));
+            if (isUpperCase(currentChar)) {
+                if (output.length() > 0 && (isLowerCase(output.charAt(output.length() - 1)) || isDigit(output.charAt(output.length() - 1)))) {
+                    output += "_";  // Add underscore before uppercase letter
+                }
+                currentChar = toLowerCase(currentChar);  // Convert to lowercase
+            }
+            output += currentChar;  // Append the character
         }
     }
-
+    
     return output;
 }
 
-static String  stringValueTemplate(const std::string& entityName) {
+static String  stringValueTemplate(const String& entityName) {
     String  prefix = "{{value_json.";
     String  suffix = "}}";
 
@@ -32,9 +37,6 @@ static String  stringValueTemplate(const std::string& entityName) {
 
     return output;
 }
-
-
-
 
 /* -------------------------------------------------------------------------- */
 /*                                DEVICE CLASS                                */
@@ -48,32 +50,77 @@ Device::Device() {
     serial_number = DEVICE_SERIAL_NUMBER;
 }
 
-// Aggiungi entità al dispositivo
-void Device::addEntity(const std::shared_ptr<Entity>& entity) {
-    entities.push_back(entity); // Storing the smart pointer
-}
-
 String Device::getSerialNumber(){
     return serial_number;
 }
 
-/* -------------------------------------------------------------------------- */
-/*                                ENTITY CLASS                                */
-/* -----String Entity::generateUniqueID(const String& entityName, const String& deviceId) {
-    // Converti il nome dell'entità in snake case (funzione stringSnakeCase)
-    String entityNameSnakeCase = stringSnakeCase(entityName.c_str());
-    
-    // Combina deviceId e entityNameSnakeCase
-    unique_id = deviceId + "_" + entityNameSnakeCase;
-
-    return unique_id;
-}--------------------------------------------------------------------- */
-Entity::Entity(String _name,  String _type) 
-  : name(_name), device_class(_type) {
-
+String Device::getDeviceManufacturer(){
+    return manufacturer;
 }
 
-JsonDocument  Entity::getConfigJson(JsonDocument _entityConfig){
+String Device::getDeviceModel(){
+    return model;
+}
+
+// Aggiungi entità al dispositivo
+void Device::addEntity(const std::shared_ptr<Entity>& entity) {
+    
+    // Correctly calling getSerialNumber() on the current Device instance
+    entity->generateUniqueID(entity->getName(), this->getSerialNumber());
+    
+    // Pass the current device instance to setStateTopic
+    entity->setStateTopic(this->getDeviceManufacturer(), this->getDeviceModel(), this->getSerialNumber());
+    
+    // Pass the current device instance to setCommandTopic
+    entity->setCommandTopic(this->getDeviceManufacturer(), this->getDeviceModel(), this->getSerialNumber());
+    
+    // Add the entity to the list
+    entities.push_back(entity); // Storing the shared pointer
+}
+
+JsonDocument Device::getEntityStatus(){
+    JsonDocument EntitiesStatus;
+    
+    for (size_t i = 0; i < entities.size(); ++i) {
+            
+        const std::shared_ptr<Entity>& entityPtr = entities[i];
+
+        // Loop through all entities and add to the JSON object
+        for (const auto& entityPtr : entities) {
+            EntitiesStatus[entityPtr->getName()] = entityPtr->getStatus();
+        }
+    }
+
+    return EntitiesStatus;
+}
+
+JsonDocument Device::getEntityConfig(const std::shared_ptr<Entity>& entity){
+    
+    JsonDocument _entityConfig;
+    JsonObject _device = _entityConfig.createNestedObject("device");
+    
+    /* ----------------------- define device configuration ---------------------- */
+    _device[_HASSIO_DEVICE_IDENTIFIERS] = identifiers;
+    _device[_HASSIO_DEVICE_MANUFACTURER] = manufacturer;
+    _device[_HASSIO_DEVICE_MODEL] = model;
+    _device[_HASSIO_DEVICE_NAME] = name;
+    _device[_HASSIO_DEVICE_SW_VERSION] = sw_version;
+   
+    /* ------------------------ add entity configuration ------------------------ */
+    entity -> getConfigJson(_entityConfig);
+
+    return _entityConfig;
+}
+/* -------------------------------------------------------------------------- */
+/*                                ENTITY CLASS                                */
+/*--------------------------------------------------------------------------- */
+
+Entity::Entity(String _name,  String _type) 
+  : name(_name), device_class(_type) {
+    
+  }
+
+JsonDocument  Entity::getConfigJson(JsonDocument& _entityConfig){
    return _entityConfig;
 }
 
@@ -83,12 +130,26 @@ String Entity::getName(){
 
 String Entity::generateUniqueID(const String& entityName, const String& deviceId) {
     // Converti il nome dell'entità in snake case (funzione stringSnakeCase)
-    String entityNameSnakeCase = stringSnakeCase(entityName.c_str());
+    String entityNameSnakeCase = stringSnakeCase(entityName);
     
     // Combina deviceId e entityNameSnakeCase
     unique_id = deviceId + "_" + entityNameSnakeCase;
 
     return unique_id;
+}
+
+void Entity::setStateTopic(const String& deviceManufacturer, const String& deviceModel , const String& deviceSerialNumber){
+    state_topic = deviceManufacturer +
+                    "/" + deviceModel +
+                    "/" + deviceSerialNumber;
+}
+    
+void Entity::setCommandTopic(const String& deviceManufacturer, const String& deviceModel , const String& deviceSerialNumber){
+    command_topic= deviceManufacturer + 
+                        "/" + deviceModel + 
+                        "/" + deviceSerialNumber + 
+                        "/" + stringSnakeCase(name) + 
+                        "/SET"; 
 }
 
 /* -------------------------------------------------------------------------- */
@@ -98,12 +159,13 @@ Switch::Switch(String _name)
   : Entity(_name, "switch") {
 }
 
-JsonDocument Switch::getConfigJson(JsonDocument _entityConfig){    
+JsonDocument Switch::getConfigJson(JsonDocument& _entityConfig){    
     
+    _entityConfig[_HASSIO_ENTITY_NAME] = name;
     _entityConfig[_HASSIO_ENTITY_ENABLED_BY_DEFAULT] = enabled_by_default;
     _entityConfig[_HASSIO_ENTITY_UNIQUE_ID] = unique_id;
     _entityConfig[_HASSIO_ENTITY_STATE_TOPIC] = state_topic;
-    _entityConfig[_HASSIO_ENTITY_VALUE_TEMPLATE] = stringValueTemplate(std::string(name.c_str()));
+    _entityConfig[_HASSIO_ENTITY_VALUE_TEMPLATE] = stringValueTemplate(name);
     _entityConfig[_HASSIO_ENTITY_COMMAND_TOPIC] = command_topic;
     _entityConfig[_HASSIO_ENTITY_PAYLOAD_ON] = payload_on;
     _entityConfig[_HASSIO_ENTITY_PAYLOAD_OFF] = payload_off;
@@ -115,10 +177,6 @@ void Switch::assignValueVariable(const char* externalValue){
     state = externalValue;
 }
 
-/*void Switch::assignValueVariable(bool& externalValue){
-    if (externalValue==true) state="ON"; else state="OFF"; 
-}*/
-
 void Switch::assignValueVariable(int& externalValue){
     switchState = &externalValue;
 }
@@ -127,11 +185,10 @@ void Switch::assignValueVariable(int& externalValue){
     return String(*switchState);
  }
 
- void Switch::setStatus(int valueToSet){
-    state = String(valueToSet);
+void Switch::setStatus(bool valueToSet){
+   if (true == valueToSet) state = payload_on; else state = payload_off;
  }
 
-/*void Switch::assignValueVariable(int& externalValue){
-    if (externalValue==true) state="ON"; else state="OFF"; 
-}*/
-
+/* -------------------------------------------------------------------------- */
+/*                                SENSOR CLASS                                */
+/* -------------------------------------------------------------------------- */

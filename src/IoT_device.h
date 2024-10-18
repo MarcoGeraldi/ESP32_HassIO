@@ -5,6 +5,8 @@
 #include <vector>
 #include <memory>
 
+
+
 // Classe base Entity
 class Entity
 {
@@ -50,8 +52,10 @@ protected:
 
     // Defines a template to extract the value. If the template throws an error, the current state will be used instead.
     String value_template;
-
- 
+    
+    //The MQTT topic to publish commands to change the entity state.
+    String command_topic;
+    
     String state;
 
 public:
@@ -59,7 +63,9 @@ public:
 
     ~Entity() {}
 
-    virtual JsonDocument  getConfigJson(JsonDocument _entityConfig);
+    
+
+    virtual JsonDocument  getConfigJson(JsonDocument& _entityConfig);
     //virtual String setStateJson();
     
     // Assegna una variabile per aggiornare il valore dell'entità
@@ -70,10 +76,12 @@ public:
 
     String getStatus(){ return state;}
     virtual void setStatus(int valueToSet){};
+    virtual void setStatus(bool valueToSet){};
     
     //String getStatesJson();
     String generateUniqueID(const String& entityName,const String& deviceId);
-
+    void setStateTopic(const String& deviceManufacturer, const String& deviceModel , const String& deviceSerialNumber);
+    void setCommandTopic(const String& deviceManufacturer, const String& deviceModel , const String& deviceSerialNumber);
     String getName();
 };
 
@@ -99,9 +107,12 @@ class Device {
     void addEntity(const std::shared_ptr<Entity>& entity);
     
     String getSerialNumber();
+    String getDeviceManufacturer();
+    String getDeviceModel();
+
     //JsonDocument getDeviceConfig();
-    //JsonDocument getEntityConfig(Entity &entity);
-    //JsonDocument getEntityStatus();
+    JsonDocument getEntityConfig(const std::shared_ptr<Entity>& entity);
+    JsonDocument getEntityStatus();
     //JsonDocument getEntityStatus(Entity &entity); 
        
 };
@@ -111,19 +122,30 @@ class Switch : public Entity
 private:    
     String payload_off = "OFF";
     String payload_on = "ON";
-    String command_topic;
+    
     int* switchState;
+
 public:
     Switch(String _name);
 
     void assignValueVariable(const char* externalValue) ;
-    //void assignValueVariable(bool& externalValue) ;
     void assignValueVariable(int& externalValue) ;
-    JsonDocument  getConfigJson(JsonDocument _entityConfig) override;
-    void setStatus(int valueToSet) override ;
+
+    JsonDocument  getConfigJson(JsonDocument& _entityConfig) override;
+    void setStatus(bool valueToSet) override ;
+    
     String getSwitchStatus();
+    
 };
 
+
+class Sensor : public Entity
+{
+    private:
+    ;
+    public:
+    ;
+};
 
 /*class Light : public Entity {
   private:

@@ -50,8 +50,6 @@ PubSubClient mqttClient(espClient);
 /* ------------------------------- IoT Device ------------------------------- */
 Device myIoTdevice;
 auto mySwitch = std::make_shared<Switch>("mySwitch");
-//Switch mySwitch("mySwitch");
-
 /* -------------------------------------------------------------------------- */
 /*                               Data Structures                              */
 /* -------------------------------------------------------------------------- */
@@ -76,6 +74,6 @@ void MQTT_reconnect();
 void IoT_device_init();
 
 int randomInt();
-const char* randomBool();
+bool randomBool();
 
 #endif

@@ -68,8 +68,9 @@ void loop() {
   } 
 
   if ( 0 == ( (millis() - timestamp)  % 1000) ) {
-    mySwitch->setStatus(rand());
-    Serial.println(mySwitch->getStatus());
+    mySwitch->setStatus(randomBool());
+    
+    serializeJsonPretty(myIoTdevice.getEntityStatus(), Serial);
   }
 
 
@@ -193,14 +194,13 @@ void MQTT_reconnect() {
 int randomInt(){
   return rand();
 }
-const char* randomBool(){
-  if (rand()%2) return "ON"; else return "OFF";
+
+bool randomBool(){
+  return rand()%2;
 }
 
-void IoT_device_init(){
-  JsonDocument mySwitchInit;
-  
+void IoT_device_init(){  
+
+  /* ---------------- add all entities to the iot device object --------------- */
   myIoTdevice.addEntity(mySwitch);
-
-
 }
