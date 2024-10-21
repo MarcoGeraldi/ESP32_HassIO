@@ -1,5 +1,4 @@
 #include "IoT_device.h"
-#include "IoT_device_config.h"
 
 #include <string>
 #include <cstdio>   // Per snprintf
@@ -59,7 +58,7 @@ Device::Device() {
 }
     
 
-// Aggiungi entità al dispositivo
+/* ----------------------- Add entities to the device ----------------------- */
 void Device::addEntity(const std::shared_ptr<Entity>& entity) {
     
     // Correctly calling getSerialNumber() on the current Device instance
@@ -155,7 +154,7 @@ void Device::configure(PubSubClient &_mqttClient){
 /*--------------------------------------------------------------------------- */
 
 Entity::Entity(String _name,  String _type) 
-  : name(_name), device_class(_type) {
+  : name(_name), type(_type) {
     
   }
 
@@ -188,7 +187,7 @@ void Entity::setCommandTopic(){
 }
 
 void Entity::setConfigTopic(){
-    config_topic = "homeassistant/"+ device_class +"/" + unique_id +"/" + name +"/config";
+    config_topic = "homeassistant/"+ type +"/" + unique_id +"/" + name +"/config";
 }
 
 String Entity::getConfigTopic(){
@@ -203,7 +202,12 @@ String Entity::getCommandTopic(){
 /*                                SWITCH CLASS                                */
 /* -------------------------------------------------------------------------- */
 Switch::Switch(String _name) 
-  : Entity(_name, "switch") {
+  : Entity(_name, _HASSIO_ENTITY_TYPE_SWITCH) {
+    device_class = _HASSIO_DEVICE_CLASS_ENTITY_SWITCH;
+}
+
+void Switch::setDeviceClass(const char* _deviceClass){
+    device_class = _deviceClass;
 }
 
 JsonDocument Switch::getConfigJson(JsonDocument& _entityConfig){    
@@ -216,6 +220,7 @@ JsonDocument Switch::getConfigJson(JsonDocument& _entityConfig){
     _entityConfig[_HASSIO_ENTITY_COMMAND_TOPIC] = command_topic;
     _entityConfig[_HASSIO_ENTITY_PAYLOAD_ON] = payload_on;
     _entityConfig[_HASSIO_ENTITY_PAYLOAD_OFF] = payload_off;
+    _entityConfig[_HASSIO_ENTITY_DEVICE_CLASS] = device_class;
     
     return _entityConfig;
 }

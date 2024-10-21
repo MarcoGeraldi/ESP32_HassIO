@@ -6,10 +6,16 @@
 #include <memory>
 #include <PubSubClient.h>
 
+#include "IoT_device_config.h"
+
 // Classe base Entity
 class Entity
 {
 protected:
+    
+    // Type of the Entity. Can be Sensor, switch, etc.
+    String type = "null";;
+    
     // Sets the class of the device, changing the device state and icon that is displayed on the frontend
     String device_class = "null";
 
@@ -142,7 +148,7 @@ public:
 
     JsonDocument getConfigJson(JsonDocument &_entityConfig) override;
     void setStatus(bool valueToSet) override;
-
+    void setDeviceClass(const char* _deviceClass);
     String getSwitchStatus();
     String getPayloadOn() {return payload_on;}
     String getPayloadOff(){return payload_off;}

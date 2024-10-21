@@ -205,6 +205,7 @@ void MQTT_reconnect() {
 void IoT_device_init(){  
 
   /* ---------------- add all entities to the iot device object --------------- */
+  mySwitch->setDeviceClass(_HASSIO_DEVICE_CLASS_ENTITY_SWITCH_OUTLET);
   myIoTdevice.addEntity(mySwitch);
 
   /* -------------------------- Configure IoT Device -------------------------- */
@@ -219,13 +220,6 @@ bool randomBool(){
   return rand()%2;
 }
 
-void IoT_device_update(){
-  
-  /* ------------------------- Update Entities Status ------------------------- */
-  mySwitch->setStatus(true);
 
-  
-
-}
 
 

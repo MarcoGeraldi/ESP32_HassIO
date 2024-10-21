@@ -73,7 +73,6 @@ void MQTT_callback(char* topic, byte* message, unsigned int length) ;
 void MQTT_reconnect();
 
 void IoT_device_init();
-void IoT_device_config();
 int randomInt();
 bool randomBool();
 
