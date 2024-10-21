@@ -24,26 +24,26 @@ void setup() {
     /* --------------------- Initialize Serial Communication -------------------- */
     Serial.begin(115200);
     pinMode(LED, OUTPUT);
+    pinMode(SWITCH_PIN, INPUT);
     
     /* -------------------------- Initialize Parameters ------------------------- */
     preferences.begin("my-app", false);
 
     /* ------------------------ Initiliaze WiFi Settings ------------------------ */
     WiFi.mode(WIFI_STA); // explicitly set mode, esp defaults to STA+AP        
-    
-    /* ----------------------- Initialize MQTT Parameters ----------------------- */
-    MQTT_paramInit();
-
     /* --------------------- Initialize WiFi Manager Object --------------------- */
     wm_init(false); 
-
+   
+    /* ----------------------- Initialize MQTT Parameters ----------------------- */
+    MQTT_init();
+    
     /* -------------------------- Initialize IoT Device ------------------------- */
     IoT_device_init();
+
+    
 }
 
 void loop() {
-  /* ------------------------- avoid overflow of timer ------------------------ */
-  if (timestamp > millis()) timestamp = 0;
   
   /* ----------------------- Process Command line inputs ---------------------- */
   commandLine.processInput();
@@ -53,26 +53,27 @@ void loop() {
 
   /* ------------------------- Connect to MQTT Broker ------------------------- */
   if (WL_CONNECTED == WiFi.status()){
-    /* ------------------------------ MQTT Process ------------------------------ */
-    if (!mqttClient.connected()){
       /* --------------------- Try to reconnect to MQTT Broker -------------------- */
-      if ( 0 == ( (millis() - timestamp)  % 5000) ) {
-          MQTT_reconnect();   
-          timestamp = millis();
+      if ( !mqttClient.connected() ) {
+          if (0 == (millis() % 5000) && timestamp != millis()) {
+            MQTT_reconnect();   
+          }
         }
-    } else {
+      else {
         /* ---------------------------- Publish MQTT Data --------------------------- */
-        mqttClient.loop();
-        mqttClient.publish("esp32/temperature", "19°C");
-    } 
+        mqttClient.loop();  
+              
+       } 
+    
   } 
 
-  if ( 0 == ( (millis() - timestamp)  % 1000) ) {
-    mySwitch->setStatus(randomBool());
-    
-    serializeJsonPretty(myIoTdevice.getEntityStatus(), Serial);
+  if ( 0 == (millis() % 100) && timestamp != millis()) {
+    mySwitch->setStatus(digitalRead(LED));
+    myIoTdevice.update(mqttClient);
   }
-
+    
+  /* ------------------------ update timestamp each ms ------------------------ */
+  if (timestamp != millis()) timestamp = millis(); 
 
   /* -------------------------- Update MQTT Entities -------------------------- */
 }
@@ -90,13 +91,19 @@ void saveConfigCallback () {
   preferences.putString(PREF_MQTT_PASSWORD,  custom_mqtt_password.getValue());
 }
 
-void MQTT_paramInit(){
+void MQTT_init(){
 
     /* ----------------------- Initialize MQTT Parameters ----------------------- */
     String _mqtt_port     = preferences.getString(PREF_MQTT_PORT,      mqtt_port);
     String _mqtt_server   = preferences.getString(PREF_MQTT_SERVER,    mqtt_server);
     String _mqtt_user     = preferences.getString(PREF_MQTT_USER,      mqtt_user);
     String _mqtt_password = preferences.getString(PREF_MQTT_PASSWORD,  mqtt_password);
+    
+    /* ---------------------- Remove whitespaces at the end --------------------- */
+    _mqtt_user.trim();
+    _mqtt_password.trim();
+    _mqtt_port.trim();
+    _mqtt_server.trim();
     
     custom_mqtt_server.setValue(_mqtt_server.c_str(),128);
     custom_mqtt_port.setValue(_mqtt_port.c_str(), 128);
@@ -105,6 +112,9 @@ void MQTT_paramInit(){
   
     mqttClient.setServer(custom_mqtt_server.getValue(), 1883);
     mqttClient.setCallback(MQTT_callback);
+
+    /* ------------------------- Connect to MQTT Broker ------------------------- */
+    mqttClient.connect("ESP8266Client99", _mqtt_user.c_str(), _mqtt_password.c_str());
 }
 
 void wm_init(bool _reset){
@@ -133,6 +143,7 @@ void wm_init(bool _reset){
 }
 
 void MQTT_callback(char* topic, byte* message, unsigned int length) {
+  
   Serial.print("Message arrived on topic: ");
   Serial.print(topic);
   Serial.print(". Message: ");
@@ -142,20 +153,18 @@ void MQTT_callback(char* topic, byte* message, unsigned int length) {
     Serial.print((char)message[i]);
     messageTemp += (char)message[i];
   }
+  
   Serial.println();
 
   // Feel free to add more if statements to control more GPIOs with MQTT
 
   // If a message is received on the topic esp32/output, you check if the message is either "on" or "off". 
   // Changes the output state according to the message
-  if (String(topic) == "esp32/output") {
-    Serial.print("Changing output to ");
-    if(messageTemp == "on"){
-      Serial.println("on");
+  if (String(topic) == mySwitch->getCommandTopic()) {
+    if(messageTemp == mySwitch->getPayloadOn()){
       digitalWrite(LED, HIGH);
     }
-    else if(messageTemp == "off"){
-      Serial.println("off");
+    else if(mySwitch->getPayloadOff()){
       digitalWrite(LED, LOW);
     }
   }
@@ -181,14 +190,25 @@ void MQTT_reconnect() {
     mqttClient.setServer(_mqtt_server.c_str(), _mqtt_port.toInt());
       
     if (mqttClient.connect("ESP8266Client99", _mqtt_user.c_str(), _mqtt_password.c_str())) {
-      Serial.println("connected");
-      // Subscribe
-      mqttClient.subscribe("esp32/output");
+      Serial.println("connected");      
+
+      /* --------------------- Update IoT Device configuration -------------------- */
+      myIoTdevice.configure(mqttClient); // Update device configuration
+
     } else {
       Serial.print("failed, rc=");
       Serial.print(mqttClient.state());
     }
   }
+}
+
+void IoT_device_init(){  
+
+  /* ---------------- add all entities to the iot device object --------------- */
+  myIoTdevice.addEntity(mySwitch);
+
+  /* -------------------------- Configure IoT Device -------------------------- */
+  myIoTdevice.configure(mqttClient); // Update device configuration
 }
 
 int randomInt(){
@@ -199,8 +219,13 @@ bool randomBool(){
   return rand()%2;
 }
 
-void IoT_device_init(){  
+void IoT_device_update(){
+  
+  /* ------------------------- Update Entities Status ------------------------- */
+  mySwitch->setStatus(true);
 
-  /* ---------------- add all entities to the iot device object --------------- */
-  myIoTdevice.addEntity(mySwitch);
+  
+
 }
+
+

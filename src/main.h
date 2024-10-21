@@ -16,6 +16,7 @@
 /*                                   Macros                                   */
 /* -------------------------------------------------------------------------- */
 #define LED 2
+#define SWITCH_PIN 12
 
 /* -------------------------------------------------------------------------- */
 /*                                Enumerations                                */
@@ -67,12 +68,12 @@ auto mySwitch = std::make_shared<Switch>("mySwitch");
 void wm_init(bool _reset);
 void saveConfigCallback ();
 
-void MQTT_paramInit();
+void MQTT_init();
 void MQTT_callback(char* topic, byte* message, unsigned int length) ;
 void MQTT_reconnect();
 
 void IoT_device_init();
-
+void IoT_device_config();
 int randomInt();
 bool randomBool();
 

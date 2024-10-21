@@ -6,6 +6,7 @@
 #include <cstdlib>  // Per malloc
 
 
+
 /* -------------------------------------------------------------------------- */
 /*                              HELPER FUNCTIONS                              */
 /* -------------------------------------------------------------------------- */
@@ -48,19 +49,15 @@ Device::Device() {
     name = DEVICE_NAME;
     sw_version = DEVICE_SW_VERS;
     serial_number = DEVICE_SERIAL_NUMBER;
+    setStateTopic();
 }
 
-String Device::getSerialNumber(){
-    return serial_number;
+ void Device::setStateTopic(){
+    state_topic = manufacturer +
+                    "/" + model +
+                    "/" + serial_number;
 }
-
-String Device::getDeviceManufacturer(){
-    return manufacturer;
-}
-
-String Device::getDeviceModel(){
-    return model;
-}
+    
 
 // Aggiungi entità al dispositivo
 void Device::addEntity(const std::shared_ptr<Entity>& entity) {
@@ -68,12 +65,15 @@ void Device::addEntity(const std::shared_ptr<Entity>& entity) {
     // Correctly calling getSerialNumber() on the current Device instance
     entity->generateUniqueID(entity->getName(), this->getSerialNumber());
     
-    // Pass the current device instance to setStateTopic
-    entity->setStateTopic(this->getDeviceManufacturer(), this->getDeviceModel(), this->getSerialNumber());
+    // Update the State Topic
+    entity->setStateTopic(this->getDeviceStateTopic());
     
-    // Pass the current device instance to setCommandTopic
-    entity->setCommandTopic(this->getDeviceManufacturer(), this->getDeviceModel(), this->getSerialNumber());
+    // Update the Command topic 
+    entity->setCommandTopic();
     
+    // Update the Config Topic
+    entity->setConfigTopic();
+
     // Add the entity to the list
     entities.push_back(entity); // Storing the shared pointer
 }
@@ -87,14 +87,14 @@ JsonDocument Device::getEntityStatus(){
 
         // Loop through all entities and add to the JSON object
         for (const auto& entityPtr : entities) {
-            EntitiesStatus[entityPtr->getName()] = entityPtr->getStatus();
+            EntitiesStatus[stringSnakeCase(entityPtr->getName())] = entityPtr->getStatus();
         }
     }
 
     return EntitiesStatus;
 }
 
-JsonDocument Device::getEntityConfig(const std::shared_ptr<Entity>& entity){
+JsonDocument Device::getEntityConfigJSON(const std::shared_ptr<Entity>& entity){
     
     JsonDocument _entityConfig;
     JsonObject _device = _entityConfig.createNestedObject("device");
@@ -111,6 +111,45 @@ JsonDocument Device::getEntityConfig(const std::shared_ptr<Entity>& entity){
 
     return _entityConfig;
 }
+
+String Device::getEntityConfigString(const std::shared_ptr<Entity> &entity){
+    
+    String entityConfig;
+    
+    serializeJsonPretty(getEntityConfigJSON(entity), entityConfig);
+    
+    return entityConfig;
+}
+
+void Device::configure(PubSubClient &_mqttClient){
+    
+    if (_mqttClient.connected()) {
+        for (size_t i = 0; i < entities.size(); ++i) {
+            
+            const std::shared_ptr<Entity>& entityPtr = entities[i];
+
+            /* ------- Loop trhough all the entities and publish the configuration ------ */
+            for (const auto& entityPtr : entities) {
+                _mqttClient.publish(entityPtr->getConfigTopic().c_str(), Device::getEntityConfigString(entityPtr).c_str());
+                _mqttClient.subscribe(entityPtr->getCommandTopic().c_str());
+            }         
+        }
+    }
+ }
+
+ void Device::update(PubSubClient &_mqttClient){
+    String entitiesState;
+    
+    if (_mqttClient.connected()) {
+       serializeJsonPretty(getEntityStatus(), entitiesState);
+       _mqttClient.publish(state_topic.c_str(), entitiesState.c_str());
+    }
+ }
+
+
+ 
+
+
 /* -------------------------------------------------------------------------- */
 /*                                ENTITY CLASS                                */
 /*--------------------------------------------------------------------------- */
@@ -138,18 +177,26 @@ String Entity::generateUniqueID(const String& entityName, const String& deviceId
     return unique_id;
 }
 
-void Entity::setStateTopic(const String& deviceManufacturer, const String& deviceModel , const String& deviceSerialNumber){
-    state_topic = deviceManufacturer +
-                    "/" + deviceModel +
-                    "/" + deviceSerialNumber;
+void Entity::setStateTopic(const String& _stateTopic){
+    state_topic = _stateTopic;
 }
     
-void Entity::setCommandTopic(const String& deviceManufacturer, const String& deviceModel , const String& deviceSerialNumber){
-    command_topic= deviceManufacturer + 
-                        "/" + deviceModel + 
-                        "/" + deviceSerialNumber + 
+void Entity::setCommandTopic(){
+    command_topic= state_topic +  
                         "/" + stringSnakeCase(name) + 
                         "/SET"; 
+}
+
+void Entity::setConfigTopic(){
+    config_topic = "homeassistant/"+ device_class +"/" + unique_id +"/" + name +"/config";
+}
+
+String Entity::getConfigTopic(){
+    return config_topic;
+}
+
+String Entity::getCommandTopic(){
+    return command_topic;
 }
 
 /* -------------------------------------------------------------------------- */
