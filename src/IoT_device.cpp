@@ -68,10 +68,10 @@ void Device::addEntity(const std::shared_ptr<Entity>& entity) {
     entity->setStateTopic(this->getDeviceStateTopic());
     
     // Update the Command topic 
-    entity->setCommandTopic();
-    
-    // Update the Config Topic
-    entity->setConfigTopic();
+    entity->setCommandTopic();    
+
+    String configTopic = "homeassistant/"+ entity->getType() +"/" + serial_number +"/" + entity->getName() +"/config";
+    entity->setConfigTopic(configTopic);
 
     // Add the entity to the list
     entities.push_back(entity); // Storing the shared pointer
@@ -186,8 +186,9 @@ void Entity::setCommandTopic(){
                         "/SET"; 
 }
 
-void Entity::setConfigTopic(){
-    config_topic = "homeassistant/"+ type +"/" + unique_id +"/" + name +"/config";
+void Entity::setConfigTopic(const String & _configTopic){
+    //config_topic = "homeassistant/"+ type +"/" + unique_id +"/" + name +"/config";
+    config_topic = _configTopic;
 }
 
 String Entity::getConfigTopic(){
@@ -198,17 +199,24 @@ String Entity::getCommandTopic(){
     return command_topic;
 }
 
+void Entity::setDeviceClass(const char* _deviceClass){
+    device_class = _deviceClass;
+}
+
 /* -------------------------------------------------------------------------- */
 /*                                SWITCH CLASS                                */
 /* -------------------------------------------------------------------------- */
 Switch::Switch(String _name) 
   : Entity(_name, _HASSIO_ENTITY_TYPE_SWITCH) {
-    device_class = _HASSIO_DEVICE_CLASS_ENTITY_SWITCH;
+    device_class = _HASSIO_DEVICE_CLASS_SWITCH;
+    payload_on = ENTITY_SWITCH_PAYLOAD_ON;
+    payload_off = ENTITY_SWITCH_PAYLOAD_OFF;
+}
+Switch::Switch(String _name,  uint8_t _pin) 
+  : Switch(_name) {
+    pin = _pin;
 }
 
-void Switch::setDeviceClass(const char* _deviceClass){
-    device_class = _deviceClass;
-}
 
 JsonDocument Switch::getConfigJson(JsonDocument& _entityConfig){    
     
@@ -221,26 +229,110 @@ JsonDocument Switch::getConfigJson(JsonDocument& _entityConfig){
     _entityConfig[_HASSIO_ENTITY_PAYLOAD_ON] = payload_on;
     _entityConfig[_HASSIO_ENTITY_PAYLOAD_OFF] = payload_off;
     _entityConfig[_HASSIO_ENTITY_DEVICE_CLASS] = device_class;
+    _entityConfig[_HASSIO_ENTITY_EXPIRE_AFTER] = expire_after;
     
     return _entityConfig;
 }
-
-void Switch::assignValueVariable(const char* externalValue){
-    state = externalValue;
-}
-
-void Switch::assignValueVariable(int& externalValue){
-    switchState = &externalValue;
-}
-
- String Switch::getSwitchStatus(){
-    return String(*switchState);
- }
 
 void Switch::setStatus(bool valueToSet){
    if (true == valueToSet) state = payload_on; else state = payload_off;
  }
 
+String Switch::getStatus(){
+    if (pin != -1) setStatus(digitalRead(pin)); 
+    return state;
+}
+
+/* -------------------------------------------------------------------------- */
+/*                             BINARY SENSOR CLASS                            */
+/* -------------------------------------------------------------------------- */
+binarySensor::binarySensor(String _name) 
+  : Entity(_name, _HASSIO_ENTITY_TYPE_BINARY_SENSOR) {
+}
+
+JsonDocument binarySensor::getConfigJson(JsonDocument& _entityConfig){    
+    
+    _entityConfig[_HASSIO_ENTITY_STATE_TOPIC] = state_topic;    
+    _entityConfig[_HASSIO_ENTITY_ENABLED_BY_DEFAULT] = enabled_by_default;
+    _entityConfig[_HASSIO_ENTITY_VALUE_TEMPLATE] = stringValueTemplate(name);
+    
+    if (name != "")         _entityConfig[_HASSIO_ENTITY_NAME] = name;
+    if (unique_id != "")    _entityConfig[_HASSIO_ENTITY_UNIQUE_ID] = unique_id;    
+    if (payload_on != "")   _entityConfig[_HASSIO_ENTITY_PAYLOAD_ON] = payload_on;
+    if (payload_off != "")  _entityConfig[_HASSIO_ENTITY_PAYLOAD_OFF] = payload_off;
+    if (device_class != "") _entityConfig[_HASSIO_ENTITY_DEVICE_CLASS] = device_class;
+    if (expire_after != 0)  _entityConfig[_HASSIO_ENTITY_EXPIRE_AFTER] = expire_after;
+    
+    return _entityConfig;
+}
+
+void binarySensor::setStatus(bool valueToSet){
+   if (true == valueToSet) state = payload_on; else state = payload_off;
+ }
+
 /* -------------------------------------------------------------------------- */
 /*                                SENSOR CLASS                                */
+/* -------------------------------------------------------------------------- */
+Sensor::Sensor(String _name) 
+  : Entity(_name, _HASSIO_ENTITY_TYPE_SENSOR) {
+
+}
+
+Sensor::Sensor(String _name, String _deviceClass)
+: Entity(_name, _HASSIO_ENTITY_TYPE_SENSOR){
+    device_class = _deviceClass;
+}
+
+JsonDocument Sensor::getConfigJson(JsonDocument& _entityConfig){    
+    
+    _entityConfig[_HASSIO_ENTITY_NAME] = name;
+    _entityConfig[_HASSIO_ENTITY_ENABLED_BY_DEFAULT] = enabled_by_default;
+    _entityConfig[_HASSIO_ENTITY_UNIQUE_ID] = unique_id;
+    _entityConfig[_HASSIO_ENTITY_STATE_TOPIC] = state_topic;
+    _entityConfig[_HASSIO_ENTITY_VALUE_TEMPLATE] = stringValueTemplate(name);
+    if (payload_on != "")   _entityConfig[_HASSIO_ENTITY_PAYLOAD_ON] = payload_on;
+    if (payload_off != "")  _entityConfig[_HASSIO_ENTITY_PAYLOAD_OFF] = payload_off;
+    if (device_class != "") _entityConfig[_HASSIO_ENTITY_DEVICE_CLASS] = device_class;
+    if (expire_after != 0 ) _entityConfig[_HASSIO_ENTITY_EXPIRE_AFTER] = expire_after;
+    if (suggested_display_precision != 0 ) _entityConfig[_HASSIO_ENTITY_SUGGESTED_DISPLAY_PRECISION] = suggested_display_precision;
+    
+    return _entityConfig;
+}
+
+void Sensor::setStatus(double valueToSet){
+    state = String(valueToSet);
+ }
+void Sensor::setStatus(const String &valueToSet){
+    state = valueToSet;
+ }
+
+
+/* -------------------------------------------------------------------------- */
+/*                            DEVICE TRIGGER CLASS                            */
+/* -------------------------------------------------------------------------- */
+deviceTrigger::deviceTrigger(String _name)
+    : Entity(_name, _HASSIO_ENTITY_TYPE_DEVICE_TRIGGER){
+        trigger_type = "action";
+        payload = name;
+        trigger_subtype = name; 
+        state = name;
+}
+
+JsonDocument deviceTrigger::getConfigJson(JsonDocument& _entityConfig){    
+    
+    _entityConfig[_HASSIO_ENTITY_AUTOMATION_TYPE] = automation_type;
+    _entityConfig[_HASSIO_ENTITY_PAYLOAD] = payload;
+    _entityConfig[_HASSIO_ENTITY_TOPIC] = topic;
+    _entityConfig[_HASSIO_ENTITY_TYPE] = trigger_type;
+    _entityConfig[_HASSIO_ENTITY_SUBTYPE] = trigger_subtype;    
+
+    return _entityConfig;
+}
+
+/* -------------------------------------------------------------------------- */
+/*                                BUTTON CLASS                                */
+/* -------------------------------------------------------------------------- */
+
+/* -------------------------------------------------------------------------- */
+/*                                 LIGHT CLASS                                */
 /* -------------------------------------------------------------------------- */

@@ -50,7 +50,13 @@ PubSubClient mqttClient(espClient);
 
 /* ------------------------------- IoT Device ------------------------------- */
 Device myIoTdevice;
-auto mySwitch = std::make_shared<Switch>("mySwitch");
+auto mySwitch = std::make_shared<Switch>("mySwitch", LED);
+auto mySensor = std::make_shared<Sensor>("mySensor", _HASSIO_DEVICE_CLASS_SENSOR_VOLTAGE);
+auto myAction = std::make_shared<Sensor>("Action");
+
+
+ 
+
 /* -------------------------------------------------------------------------- */
 /*                               Data Structures                              */
 /* -------------------------------------------------------------------------- */

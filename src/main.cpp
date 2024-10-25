@@ -67,11 +67,16 @@ void loop() {
     
   } 
 
-  if ( 0 == (millis() % 100) && timestamp != millis()) {
-    mySwitch->setStatus(digitalRead(LED));
+  if ( 0 == (millis() % 1000) && timestamp != millis()) {
+
+    mySensor->setStatus((double)rand()); 
+    
+
     myIoTdevice.update(mqttClient);
   }
     
+
+
   /* ------------------------ update timestamp each ms ------------------------ */
   if (timestamp != millis()) timestamp = millis(); 
 
@@ -156,18 +161,22 @@ void MQTT_callback(char* topic, byte* message, unsigned int length) {
   
   Serial.println();
 
-  // Feel free to add more if statements to control more GPIOs with MQTT
 
   // If a message is received on the topic esp32/output, you check if the message is either "on" or "off". 
   // Changes the output state according to the message
   if (String(topic) == mySwitch->getCommandTopic()) {
+    
     if(messageTemp == mySwitch->getPayloadOn()){
-      digitalWrite(LED, HIGH);
+      digitalWrite(LED, HIGH);  myAction -> setStatus("led_on");
     }
     else if(mySwitch->getPayloadOff()){
-      digitalWrite(LED, LOW);
+      digitalWrite(LED, LOW);  myAction -> setStatus("led_off");
     }
+
   }
+
+  /* -------------------------- update device status -------------------------- */
+  myIoTdevice.update(mqttClient);
 }
 
 void MQTT_reconnect() {
@@ -205,8 +214,11 @@ void MQTT_reconnect() {
 void IoT_device_init(){  
 
   /* ---------------- add all entities to the iot device object --------------- */
-  mySwitch->setDeviceClass(_HASSIO_DEVICE_CLASS_ENTITY_SWITCH_OUTLET);
+  mySwitch->setDeviceClass(_HASSIO_DEVICE_CLASS_SWITCH_OUTLET);
+  
   myIoTdevice.addEntity(mySwitch);
+  myIoTdevice.addEntity(mySensor); 
+  myIoTdevice.addEntity(myAction); 
 
   /* -------------------------- Configure IoT Device -------------------------- */
   myIoTdevice.configure(mqttClient); // Update device configuration
