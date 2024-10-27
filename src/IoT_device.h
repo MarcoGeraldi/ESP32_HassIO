@@ -12,10 +12,10 @@
 class Entity
 {
 protected:
-    
     // Type of the Entity. Can be Sensor, switch, etc.
-    String type = "null";;
-    
+    String type = "null";
+    ;
+
     // Sets the class of the device, changing the device state and icon that is displayed on the frontend
     String device_class = "";
 
@@ -68,23 +68,23 @@ protected:
 
     // The string that represents the online state.
     String payload_available = "online";
-    
+
     // The string that represents the offline state.
     String payload_not_available = "offline";
 
     // The string that represents the off state. It will be compared to the message in the state_topic (see value_template for details)
     String payload_off = "";
-    
+
     // The string that represents the on state. It will be compared to the message in the state_topic (see value_template for details)
     String payload_on = "";
 
     // For sensors that only send on state updates (like PIRs), this variable sets a delay in seconds after which the sensor’s state will be updated back to off
-    int off_delay = 0 ;
+    int off_delay = 0;
 
     // The MQTT topic subscribed to receive trigger events.
     String topic = "";
 
-    //The type of the trigger
+    // The type of the trigger
     String trigger_type = "";
 
     // to check if new trigger occured
@@ -105,29 +105,29 @@ public:
     // void assignValueVariable(float& externalValue);
 
     virtual String getStatus() { return state; }
-    virtual void setStatus(const String &valueToSet){};
+    virtual void setStatus(const String &valueToSet) {};
     virtual void setStatus(int valueToSet) {};
     virtual void setStatus(bool valueToSet) {};
     virtual void setStatus(double valueToSet) {};
 
     // String getStatesJson();
     String generateUniqueID(const String &entityName, const String &deviceId);
-    void setStateTopic(const String &_stateTopic);
+    virtual void setStateTopic(const String &_stateTopic);
     void setCommandTopic();
     void setConfigTopic(const String &_configTopic);
-    void setTopic(const String &_setTopic) {topic = _setTopic;}
+    void setTopic(const String &_setTopic) { topic = _setTopic; }
     String getConfigTopic();
     String getCommandTopic();
     String getName();
-    String getType(){return type;}
-    String getPayloadOn() {return payload_on;}
-    String getPayloadOff(){return payload_off;}
-    String getTriggerType(){return trigger_type;}
-    String getTopic(){return topic;}
-    bool getTriggerFlag(){return trigger_flag;}
-    void setDeviceClass(const char* _deviceClass);
-    void setTriggerFlag (bool _triggerFlag){trigger_flag = _triggerFlag;}
-
+    String getType() { return type; }
+    String getPayloadOn() { return payload_on; }
+    String getPayloadOff() { return payload_off; }
+    String getTriggerType() { return trigger_type; }
+    String getTopic() { return topic; }
+    String getStateTopic() {return state_topic;}
+    bool getTriggerFlag() { return trigger_flag; }
+    void setDeviceClass(const char *_deviceClass);
+    void setTriggerFlag(bool _triggerFlag) { trigger_flag = _triggerFlag; }
 };
 
 // Classe dispositivo (Device)
@@ -152,26 +152,26 @@ public:
 
     void addEntity(const std::shared_ptr<Entity> &entity);
 
-    String getSerialNumber()        {return serial_number;}
-    String getDeviceManufacturer()  {return manufacturer;}
-    String getDeviceModel()         {return model;}
-    String getDeviceStateTopic()    {return state_topic;}
+    String getSerialNumber() { return serial_number; }
+    String getDeviceManufacturer() { return manufacturer; }
+    String getDeviceModel() { return model; }
+    String getDeviceStateTopic() { return state_topic; }
 
     // JsonDocument getDeviceConfig();
     JsonDocument getEntityConfigJSON(const std::shared_ptr<Entity> &entity);
-    String getEntityConfigString    (const std::shared_ptr<Entity> &entity);
+    String getEntityConfigString(const std::shared_ptr<Entity> &entity);
     JsonDocument getEntityStatus();
     void setStateTopic();
-    
+
     void configure(PubSubClient &_mqttClient);
     void update(PubSubClient &_mqttClient);
-    
 };
 
 class Switch : public Entity
 {
-private:  
+private:
     uint8_t pin = -1;
+
 public:
     Switch(String _name);
     Switch(String _name, uint8_t _pin);
@@ -183,36 +183,37 @@ public:
 
 class binarySensor : public Entity
 {
-    private:
+private:
+    uint8_t pin = -1;
 
-    public:
-        binarySensor(String _name);
-        binarySensor(String _name, uint8_t _pin);
-        
-        JsonDocument getConfigJson(JsonDocument &_entityConfig) override;
-        void setStatus(bool valueToSet) override;
+public:
+    binarySensor(String _name);
+    binarySensor(String _name, uint8_t _pin);
+
+    JsonDocument getConfigJson(JsonDocument &_entityConfig) override;
+    void setStatus(bool valueToSet) override;
+    String getStatus() override;
 };
 
 class Sensor : public Entity
 {
     int suggested_display_precision = 0;
 
-    private:
-        ;
+private:
+    ;
 
-    public:
-        Sensor(String _name);
-        Sensor(String _name, String _deviceClass);
-            
-        JsonDocument getConfigJson(JsonDocument &_entityConfig) override;
-        void setStatus(double valueToSet) override;
-        void setStatus(const String &valueToSet) override;
+public:
+    Sensor(String _name);
+    Sensor(String _name, String _deviceClass);
+
+    JsonDocument getConfigJson(JsonDocument &_entityConfig) override;
+    void setStatus(double valueToSet) override;
+    void setStatus(const String &valueToSet) override;
 };
 
-class deviceTrigger: public Entity
+class deviceTrigger : public Entity
 {
-private:  
-
+private:
     String trigger_subtype = "";
     String automation_type = "trigger";
     String payload = "";
@@ -222,20 +223,27 @@ public:
     deviceTrigger(String _name);
 
     JsonDocument getConfigJson(JsonDocument &_entityConfig) override;
-    
-    
 };
 
-/*class Light : public Entity {
+class Light : public Entity {
+    
   private:
-    int *brightness;
+    bool brightness = true;
+    String schema  = "json";
+    std::vector<const char*> supported_color_modes;
+    int max_mireds = 500;
+    int min_mireds = 142;
+
+    uint8_t rgb_pins [3]; 
+    uint8_t CCT_pins [2];
 
   public:
     Light(String _name);
 
-    void assignBrightness(int &var);
+    JsonDocument getConfigJson(JsonDocument &_entityConfig) override;
+    void setStateTopic(const String &_stateTopic) override;
+    String getStatus() override;
 
-    //JsonDocument getConfigJson() override;
-};*/
+};
 
 #endif

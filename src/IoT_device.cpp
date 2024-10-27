@@ -1,39 +1,45 @@
 #include "IoT_device.h"
 
 #include <string>
-#include <cstdio>   // Per snprintf
-#include <cstdlib>  // Per malloc
-
-
+#include <cstdio>  // Per snprintf
+#include <cstdlib> // Per malloc
 
 /* -------------------------------------------------------------------------- */
 /*                              HELPER FUNCTIONS                              */
 /* -------------------------------------------------------------------------- */
-String stringSnakeCase(const String& entityName) {
+String stringSnakeCase(const String &entityName)
+{
     String output = "";
 
-    for (char currentChar : entityName) {
-        if (currentChar == ' ') {
-            output += "_";  // Replace space with underscore
-        } else {
-            if (isUpperCase(currentChar)) {
-                if (output.length() > 0 && (isLowerCase(output.charAt(output.length() - 1)) || isDigit(output.charAt(output.length() - 1)))) {
-                    output += "_";  // Add underscore before uppercase letter
+    for (char currentChar : entityName)
+    {
+        if (currentChar == ' ')
+        {
+            output += "_"; // Replace space with underscore
+        }
+        else
+        {
+            if (isUpperCase(currentChar))
+            {
+                if (output.length() > 0 && (isLowerCase(output.charAt(output.length() - 1)) || isDigit(output.charAt(output.length() - 1))))
+                {
+                    output += "_"; // Add underscore before uppercase letter
                 }
-                currentChar = toLowerCase(currentChar);  // Convert to lowercase
+                currentChar = toLowerCase(currentChar); // Convert to lowercase
             }
-            output += currentChar;  // Append the character
+            output += currentChar; // Append the character
         }
     }
-    
+
     return output;
 }
 
-static String  stringValueTemplate(const String& entityName) {
-    String  prefix = "{{value_json.";
-    String  suffix = "}}";
+static String stringValueTemplate(const String &entityName)
+{
+    String prefix = "{{value_json.";
+    String suffix = "}}";
 
-    String  output = prefix + stringSnakeCase(entityName) + suffix;
+    String output = prefix + stringSnakeCase(entityName) + suffix;
 
     return output;
 }
@@ -41,7 +47,8 @@ static String  stringValueTemplate(const String& entityName) {
 /* -------------------------------------------------------------------------- */
 /*                                DEVICE CLASS                                */
 /* -------------------------------------------------------------------------- */
-Device::Device() {
+Device::Device()
+{
     identifiers = DEVICE_IDENTIFIER;
     manufacturer = DEVICE_MANUFACTURER;
     model = DEVICE_MODEL;
@@ -51,41 +58,45 @@ Device::Device() {
     setStateTopic();
 }
 
- void Device::setStateTopic(){
+void Device::setStateTopic()
+{
     state_topic = manufacturer +
-                    "/" + model +
-                    "/" + serial_number;
+                  "/" + model +
+                  "/" + serial_number;
 }
-    
 
 /* ----------------------- Add entities to the device ----------------------- */
-void Device::addEntity(const std::shared_ptr<Entity>& entity) {
-    
+void Device::addEntity(const std::shared_ptr<Entity> &entity)
+{
+
     // Correctly calling getSerialNumber() on the current Device instance
     entity->generateUniqueID(entity->getName(), this->getSerialNumber());
-    
+
     // Update the State Topic
     entity->setStateTopic(this->getDeviceStateTopic());
-    
-    // Update the Command topic 
-    entity->setCommandTopic();    
 
-    String configTopic = "homeassistant/"+ entity->getType() +"/" + serial_number +"/" + entity->getName() +"/config";
+    // Update the Command topic
+    entity->setCommandTopic();
+
+    String configTopic = "homeassistant/" + entity->getType() + "/" + serial_number + "/" + entity->getName() + "/config";
     entity->setConfigTopic(configTopic);
 
     // Add the entity to the list
     entities.push_back(entity); // Storing the shared pointer
 }
 
-JsonDocument Device::getEntityStatus(){
+JsonDocument Device::getEntityStatus()
+{
     JsonDocument EntitiesStatus;
-    
-    for (size_t i = 0; i < entities.size(); ++i) {
-            
-        const std::shared_ptr<Entity>& entityPtr = entities[i];
+
+    for (size_t i = 0; i < entities.size(); ++i)
+    {
+
+        const std::shared_ptr<Entity> &entityPtr = entities[i];
 
         // Loop through all entities and add to the JSON object
-        for (const auto& entityPtr : entities) {
+        for (const auto &entityPtr : entities)
+        {
             EntitiesStatus[stringSnakeCase(entityPtr->getName())] = entityPtr->getStatus();
         }
     }
@@ -93,133 +104,228 @@ JsonDocument Device::getEntityStatus(){
     return EntitiesStatus;
 }
 
-JsonDocument Device::getEntityConfigJSON(const std::shared_ptr<Entity>& entity){
-    
+JsonDocument Device::getEntityConfigJSON(const std::shared_ptr<Entity> &entity)
+{
+
     JsonDocument _entityConfig;
     JsonObject _device = _entityConfig.createNestedObject("device");
-    
+
     /* ----------------------- define device configuration ---------------------- */
     _device[_HASSIO_DEVICE_IDENTIFIERS] = identifiers;
     _device[_HASSIO_DEVICE_MANUFACTURER] = manufacturer;
     _device[_HASSIO_DEVICE_MODEL] = model;
     _device[_HASSIO_DEVICE_NAME] = name;
     _device[_HASSIO_DEVICE_SW_VERSION] = sw_version;
-   
+
     /* ------------------------ add entity configuration ------------------------ */
-    entity -> getConfigJson(_entityConfig);
+    entity->getConfigJson(_entityConfig);
 
     return _entityConfig;
 }
 
-String Device::getEntityConfigString(const std::shared_ptr<Entity> &entity){
-    
+String Device::getEntityConfigString(const std::shared_ptr<Entity> &entity)
+{
+
     String entityConfig;
-    
+
     serializeJsonPretty(getEntityConfigJSON(entity), entityConfig);
-    
+
     return entityConfig;
 }
 
-void Device::configure(PubSubClient &_mqttClient){
-    
-    if (_mqttClient.connected()) {
-        for (size_t i = 0; i < entities.size(); ++i) {
-            
-            const std::shared_ptr<Entity>& entityPtr = entities[i];
+void Device::configure(PubSubClient &_mqttClient)
+{
+
+    if (_mqttClient.connected())
+    {
+        for (size_t i = 0; i < entities.size(); ++i)
+        {
+
+            const std::shared_ptr<Entity> &entityPtr = entities[i];
 
             /* ------- Loop trhough all the entities and publish the configuration ------ */
-            for (const auto& entityPtr : entities) {
+            for (const auto &entityPtr : entities)
+            {
                 _mqttClient.publish(entityPtr->getConfigTopic().c_str(), Device::getEntityConfigString(entityPtr).c_str());
                 _mqttClient.subscribe(entityPtr->getCommandTopic().c_str());
-            }         
+            }
         }
     }
- }
+}
 
- void Device::update(PubSubClient &_mqttClient){
+void Device::update(PubSubClient &_mqttClient)
+{
     String entitiesState;
-    
-    if (_mqttClient.connected()) {
-       serializeJsonPretty(getEntityStatus(), entitiesState);
-       _mqttClient.publish(state_topic.c_str(), entitiesState.c_str());
+
+    if (_mqttClient.connected())
+    {
+        serializeJsonPretty(getEntityStatus(), entitiesState);
+        _mqttClient.publish(state_topic.c_str(), entitiesState.c_str());
+
+        // Publish entities with JSON status (Lights)        
+        for (size_t i = 0; i < entities.size(); ++i)
+        {
+            const std::shared_ptr<Entity> &entityPtr = entities[i];
+
+            /* ------- Loop trhough all the entities and publish the Status ------ */
+            for (const auto &entityPtr : entities){
+                if (entityPtr->getType() == _HASSIO_ENTITY_TYPE_LIGHT){
+                    _mqttClient.publish(entityPtr -> getStateTopic().c_str(), entityPtr -> getStatus().c_str());
+                }
+            }
+        }
+
     }
- }
-
-
- 
-
+}
 
 /* -------------------------------------------------------------------------- */
 /*                                ENTITY CLASS                                */
 /*--------------------------------------------------------------------------- */
 
-Entity::Entity(String _name,  String _type) 
-  : name(_name), type(_type) {
-    
-  }
-
-JsonDocument  Entity::getConfigJson(JsonDocument& _entityConfig){
-   return _entityConfig;
+Entity::Entity(String _name, String _type)
+    : name(_name), type(_type)
+{
 }
 
-String Entity::getName(){
+JsonDocument Entity::getConfigJson(JsonDocument &_entityConfig)
+{
+    return _entityConfig;
+}
+
+String Entity::getName()
+{
     return name;
 }
 
-String Entity::generateUniqueID(const String& entityName, const String& deviceId) {
+String Entity::generateUniqueID(const String &entityName, const String &deviceId)
+{
     // Converti il nome dell'entità in snake case (funzione stringSnakeCase)
     String entityNameSnakeCase = stringSnakeCase(entityName);
-    
+
     // Combina deviceId e entityNameSnakeCase
     unique_id = deviceId + "_" + entityNameSnakeCase;
 
     return unique_id;
 }
 
-void Entity::setStateTopic(const String& _stateTopic){
+void Entity::setStateTopic(const String &_stateTopic)
+{
     state_topic = _stateTopic;
 }
-    
-void Entity::setCommandTopic(){
-    command_topic= state_topic +  
-                        "/" + stringSnakeCase(name) + 
-                        "/SET"; 
+
+void Entity::setCommandTopic()
+{
+    command_topic = state_topic +
+                    "/" + stringSnakeCase(name) +
+                    "/SET";
 }
 
-void Entity::setConfigTopic(const String & _configTopic){
-    //config_topic = "homeassistant/"+ type +"/" + unique_id +"/" + name +"/config";
+void Entity::setConfigTopic(const String &_configTopic)
+{
+    // config_topic = "homeassistant/"+ type +"/" + unique_id +"/" + name +"/config";
     config_topic = _configTopic;
 }
 
-String Entity::getConfigTopic(){
+String Entity::getConfigTopic()
+{
     return config_topic;
 }
 
-String Entity::getCommandTopic(){
+String Entity::getCommandTopic()
+{
     return command_topic;
 }
 
-void Entity::setDeviceClass(const char* _deviceClass){
+void Entity::setDeviceClass(const char *_deviceClass)
+{
     device_class = _deviceClass;
 }
+/* -------------------------------------------------------------------------- */
+/*                                 LIGHT CLASS                                */
+/* -------------------------------------------------------------------------- */
+Light::Light(String _name)
+    : Entity(_name, _HASSIO_ENTITY_TYPE_LIGHT)
+{
+   // Assign values after declaration
+  supported_color_modes.push_back("xy");
+  supported_color_modes.push_back("color_temp");
 
+  state = "ON";
+}
+
+JsonDocument Light::getConfigJson(JsonDocument &_entityConfig) {
+    _entityConfig["brightness"] = brightness;
+    _entityConfig[_HASSIO_ENTITY_COMMAND_TOPIC] = command_topic;
+    _entityConfig["max_mireds"] = max_mireds;
+    _entityConfig["min_mireds"] = min_mireds;
+    _entityConfig[_HASSIO_ENTITY_NAME] = name;
+    _entityConfig["schema"] = schema;
+    _entityConfig[_HASSIO_ENTITY_STATE_TOPIC] = state_topic;
+    _entityConfig[_HASSIO_ENTITY_UNIQUE_ID] = unique_id;
+    _entityConfig[_HASSIO_ENTITY_VALUE_TEMPLATE] = stringValueTemplate(name);
+
+    JsonArray modes = _entityConfig.createNestedArray("supported_color_modes");
+
+    // Populate JSON with supported color modes
+    for (const char* mode : supported_color_modes) {
+        modes.add(mode);
+  }
+
+    return _entityConfig;
+}
+
+void Light::setStateTopic(const String &_stateTopic) {
+    state_topic = _stateTopic + "/" + unique_id;
+}
+
+String Light::getStatus() {
+    String lightState;
+    
+    JsonDocument lightStateJSON;
+
+    // Add fields to the document
+    lightStateJSON["brightness"] = 152;
+    
+    // Add nested color object and its properties
+    JsonObject color = lightStateJSON.createNestedObject("color");
+    color["h"] = 25;
+    color["hue"] = 25;
+    color["s"] = 95;
+    color["saturation"] = 95;
+    color["x"] = 0.5267;
+    color["y"] = 0.4133;
+    
+    // Add other fields
+    lightStateJSON["color_mode"] = "xy";
+    lightStateJSON["color_power_on_behavior"] = nullptr; // null value
+    lightStateJSON["color_temp"] = 500;
+    lightStateJSON["do_not_disturb"] = nullptr; // null value
+    lightStateJSON["linkquality"] = 48;
+    lightStateJSON["state"] = state;
+
+    // Serialize JSON to a string and print it
+    serializeJson(lightStateJSON, lightState);
+
+    return lightState;
+}
 /* -------------------------------------------------------------------------- */
 /*                                SWITCH CLASS                                */
 /* -------------------------------------------------------------------------- */
-Switch::Switch(String _name) 
-  : Entity(_name, _HASSIO_ENTITY_TYPE_SWITCH) {
+Switch::Switch(String _name)
+    : Entity(_name, _HASSIO_ENTITY_TYPE_SWITCH)
+{
     device_class = _HASSIO_DEVICE_CLASS_SWITCH;
     payload_on = ENTITY_SWITCH_PAYLOAD_ON;
     payload_off = ENTITY_SWITCH_PAYLOAD_OFF;
 }
-Switch::Switch(String _name,  uint8_t _pin) 
-  : Switch(_name) {
+Switch::Switch(String _name, uint8_t _pin)
+    : Switch(_name)
+{
     pin = _pin;
 }
 
-
-JsonDocument Switch::getConfigJson(JsonDocument& _entityConfig){    
-    
+JsonDocument Switch::getConfigJson(JsonDocument &_entityConfig)
+{
     _entityConfig[_HASSIO_ENTITY_NAME] = name;
     _entityConfig[_HASSIO_ENTITY_ENABLED_BY_DEFAULT] = enabled_by_default;
     _entityConfig[_HASSIO_ENTITY_UNIQUE_ID] = unique_id;
@@ -230,101 +336,151 @@ JsonDocument Switch::getConfigJson(JsonDocument& _entityConfig){
     _entityConfig[_HASSIO_ENTITY_PAYLOAD_OFF] = payload_off;
     _entityConfig[_HASSIO_ENTITY_DEVICE_CLASS] = device_class;
     _entityConfig[_HASSIO_ENTITY_EXPIRE_AFTER] = expire_after;
-    
+
     return _entityConfig;
 }
 
-void Switch::setStatus(bool valueToSet){
-   if (true == valueToSet) state = payload_on; else state = payload_off;
- }
+void Switch::setStatus(bool valueToSet)
+{
 
-String Switch::getStatus(){
-    if (pin != -1) setStatus(digitalRead(pin)); 
+    // Control output pin if it is defined
+    if (pin != -1)
+        digitalWrite(pin, valueToSet);
+
+    if (true == valueToSet)
+        state = payload_on;
+    else
+        state = payload_off;
+}
+
+String Switch::getStatus()
+{
+
+    // Read Status of the output pin if it is defined
+    if (pin != -1)
+        setStatus(digitalRead(pin));
     return state;
 }
 
 /* -------------------------------------------------------------------------- */
 /*                             BINARY SENSOR CLASS                            */
 /* -------------------------------------------------------------------------- */
-binarySensor::binarySensor(String _name) 
-  : Entity(_name, _HASSIO_ENTITY_TYPE_BINARY_SENSOR) {
+binarySensor::binarySensor(String _name)
+    : Entity(_name, _HASSIO_ENTITY_TYPE_BINARY_SENSOR)
+{
 }
 
-JsonDocument binarySensor::getConfigJson(JsonDocument& _entityConfig){    
-    
-    _entityConfig[_HASSIO_ENTITY_STATE_TOPIC] = state_topic;    
+binarySensor::binarySensor(String _name, uint8_t _pin)
+    : binarySensor(_name)
+{
+    pin = _pin;
+}
+
+JsonDocument binarySensor::getConfigJson(JsonDocument &_entityConfig)
+{
+
+    _entityConfig[_HASSIO_ENTITY_STATE_TOPIC] = state_topic;
     _entityConfig[_HASSIO_ENTITY_ENABLED_BY_DEFAULT] = enabled_by_default;
     _entityConfig[_HASSIO_ENTITY_VALUE_TEMPLATE] = stringValueTemplate(name);
-    
-    if (name != "")         _entityConfig[_HASSIO_ENTITY_NAME] = name;
-    if (unique_id != "")    _entityConfig[_HASSIO_ENTITY_UNIQUE_ID] = unique_id;    
-    if (payload_on != "")   _entityConfig[_HASSIO_ENTITY_PAYLOAD_ON] = payload_on;
-    if (payload_off != "")  _entityConfig[_HASSIO_ENTITY_PAYLOAD_OFF] = payload_off;
-    if (device_class != "") _entityConfig[_HASSIO_ENTITY_DEVICE_CLASS] = device_class;
-    if (expire_after != 0)  _entityConfig[_HASSIO_ENTITY_EXPIRE_AFTER] = expire_after;
-    
+
+    if (name != "")
+        _entityConfig[_HASSIO_ENTITY_NAME] = name;
+    if (unique_id != "")
+        _entityConfig[_HASSIO_ENTITY_UNIQUE_ID] = unique_id;
+    if (payload_on != "")
+        _entityConfig[_HASSIO_ENTITY_PAYLOAD_ON] = payload_on;
+    if (payload_off != "")
+        _entityConfig[_HASSIO_ENTITY_PAYLOAD_OFF] = payload_off;
+    if (device_class != "")
+        _entityConfig[_HASSIO_ENTITY_DEVICE_CLASS] = device_class;
+    if (expire_after != 0)
+        _entityConfig[_HASSIO_ENTITY_EXPIRE_AFTER] = expire_after;
+
     return _entityConfig;
 }
 
-void binarySensor::setStatus(bool valueToSet){
-   if (true == valueToSet) state = payload_on; else state = payload_off;
- }
+void binarySensor::setStatus(bool valueToSet)
+{
+    if (true == valueToSet)
+        state = payload_on;
+    else
+        state = payload_off;
+}
+
+String binarySensor::getStatus()
+{
+
+    // Read Status of the output pin if it is defined
+    if (pin != -1)
+        setStatus(digitalRead(pin));
+    return state;
+}
 
 /* -------------------------------------------------------------------------- */
 /*                                SENSOR CLASS                                */
 /* -------------------------------------------------------------------------- */
-Sensor::Sensor(String _name) 
-  : Entity(_name, _HASSIO_ENTITY_TYPE_SENSOR) {
-
+Sensor::Sensor(String _name)
+    : Entity(_name, _HASSIO_ENTITY_TYPE_SENSOR)
+{
 }
 
 Sensor::Sensor(String _name, String _deviceClass)
-: Entity(_name, _HASSIO_ENTITY_TYPE_SENSOR){
+    : Entity(_name, _HASSIO_ENTITY_TYPE_SENSOR)
+{
     device_class = _deviceClass;
 }
 
-JsonDocument Sensor::getConfigJson(JsonDocument& _entityConfig){    
-    
+JsonDocument Sensor::getConfigJson(JsonDocument &_entityConfig)
+{
+
     _entityConfig[_HASSIO_ENTITY_NAME] = name;
     _entityConfig[_HASSIO_ENTITY_ENABLED_BY_DEFAULT] = enabled_by_default;
     _entityConfig[_HASSIO_ENTITY_UNIQUE_ID] = unique_id;
     _entityConfig[_HASSIO_ENTITY_STATE_TOPIC] = state_topic;
     _entityConfig[_HASSIO_ENTITY_VALUE_TEMPLATE] = stringValueTemplate(name);
-    if (payload_on != "")   _entityConfig[_HASSIO_ENTITY_PAYLOAD_ON] = payload_on;
-    if (payload_off != "")  _entityConfig[_HASSIO_ENTITY_PAYLOAD_OFF] = payload_off;
-    if (device_class != "") _entityConfig[_HASSIO_ENTITY_DEVICE_CLASS] = device_class;
-    if (expire_after != 0 ) _entityConfig[_HASSIO_ENTITY_EXPIRE_AFTER] = expire_after;
-    if (suggested_display_precision != 0 ) _entityConfig[_HASSIO_ENTITY_SUGGESTED_DISPLAY_PRECISION] = suggested_display_precision;
-    
+    if (payload_on != "")
+        _entityConfig[_HASSIO_ENTITY_PAYLOAD_ON] = payload_on;
+    if (payload_off != "")
+        _entityConfig[_HASSIO_ENTITY_PAYLOAD_OFF] = payload_off;
+    if (device_class != "")
+        _entityConfig[_HASSIO_ENTITY_DEVICE_CLASS] = device_class;
+    if (expire_after != 0)
+        _entityConfig[_HASSIO_ENTITY_EXPIRE_AFTER] = expire_after;
+    if (suggested_display_precision != 0)
+        _entityConfig[_HASSIO_ENTITY_SUGGESTED_DISPLAY_PRECISION] = suggested_display_precision;
+
     return _entityConfig;
 }
 
-void Sensor::setStatus(double valueToSet){
+void Sensor::setStatus(double valueToSet)
+{
     state = String(valueToSet);
- }
-void Sensor::setStatus(const String &valueToSet){
+}
+void Sensor::setStatus(const String &valueToSet)
+{
     state = valueToSet;
- }
-
+}
 
 /* -------------------------------------------------------------------------- */
 /*                            DEVICE TRIGGER CLASS                            */
 /* -------------------------------------------------------------------------- */
 deviceTrigger::deviceTrigger(String _name)
-    : Entity(_name, _HASSIO_ENTITY_TYPE_DEVICE_TRIGGER){
-        trigger_type = "action";
-        payload = name;
-        trigger_subtype = name; 
-        state = name;
+    : Entity(_name, _HASSIO_ENTITY_TYPE_DEVICE_TRIGGER)
+{
+    trigger_type = "action";
+    payload = name;
+    trigger_subtype = name;
+    state = name;
 }
 
-JsonDocument deviceTrigger::getConfigJson(JsonDocument& _entityConfig){    
-    
+JsonDocument deviceTrigger::getConfigJson(JsonDocument &_entityConfig)
+{
+
     _entityConfig[_HASSIO_ENTITY_AUTOMATION_TYPE] = automation_type;
     _entityConfig[_HASSIO_ENTITY_PAYLOAD] = payload;
     _entityConfig[_HASSIO_ENTITY_TOPIC] = topic;
     _entityConfig[_HASSIO_ENTITY_TYPE] = trigger_type;
-    _entityConfig[_HASSIO_ENTITY_SUBTYPE] = trigger_subtype;    
+    _entityConfig[_HASSIO_ENTITY_SUBTYPE] = trigger_subtype;
 
     return _entityConfig;
 }
@@ -333,6 +489,5 @@ JsonDocument deviceTrigger::getConfigJson(JsonDocument& _entityConfig){
 /*                                BUTTON CLASS                                */
 /* -------------------------------------------------------------------------- */
 
-/* -------------------------------------------------------------------------- */
-/*                                 LIGHT CLASS                                */
-/* -------------------------------------------------------------------------- */
+
+    
