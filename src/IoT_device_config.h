@@ -58,6 +58,19 @@
 #define _HASSIO_ENTITY_TYPE "type"                                               // The type of the trigger
 #define _HASSIO_ENTITY_SUBTYPE "subtype"                                         // The subtype of the trigger
 
+/* ----------------------- Light Entity configuration ----------------------- */
+#define _HASSIO_ENTITY_LIGHT_SCHEMA_DEFAULT "default"
+#define _HASSIO_ENTITY_LIGHT_SCHEMA_JSON "json"
+#define _HASSIO_ENTITY_LIGHT_SCHEMA_TEMPLATE "template"
+#define _HASSIO_ENTITY_LIGHT_COLOR_MODE_ONOFF "onoff"
+#define _HASSIO_ENTITY_LIGHT_COLOR_MODE_BRIGHTNESS "brightness"
+#define _HASSIO_ENTITY_LIGHT_COLOR_MODE_COLORTEMP "color_temp"
+#define _HASSIO_ENTITY_LIGHT_COLOR_MODE_HS "hs"
+#define _HASSIO_ENTITY_LIGHT_COLOR_MODE_XY "xy"
+#define _HASSIO_ENTITY_LIGHT_COLOR_MODE_RGB "rgb"
+#define _HASSIO_ENTITY_LIGHT_COLOR_MODE_RGBW "rgbw"
+#define _HASSIO_ENTITY_LIGHT_COLOR_MODE_RGBWW "rgbww"
+#define _HASSIO_ENTITY_LIGHT_COLOR_MODE_WHITE "white"
 
 /* -------------------------------------------------------------------------- */
 #define ENTITY_CATEGORY_DIAGNOSTIC "diagnostic"
@@ -195,5 +208,7 @@
 #define _HASSIO_DEVICE_CLASS_SENSOR_WATER "water"                                                       // Water consumption in L, gal, m³, ft³, or CCF.
 #define _HASSIO_DEVICE_CLASS_SENSOR_WEIGHT "weight"                                                     // Generic mass in kg, g, mg, µg, oz, lb, or st.
 #define _HASSIO_DEVICE_CLASS_SENSOR_WIND_SPEED "wind_speed"                                             // Wind speed in Beaufort, ft/s, km/h, kn, m/s, or mph.
+
+
 
 #endif

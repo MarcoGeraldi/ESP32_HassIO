@@ -23,8 +23,8 @@ void setup()
 
   /* --------------------- Initialize Serial Communication -------------------- */
   Serial.begin(115200);
+  
   pinMode(LED, OUTPUT);
-  pinMode(SWITCH_PIN, INPUT);
 
   /* -------------------------- Initialize Parameters ------------------------- */
   preferences.begin("my-app", false);
@@ -131,6 +131,10 @@ void MQTT_callback(char *topic, byte *message, unsigned int length)
       digitalWrite(LED, LOW);
       myAction->setStatus("led_off");
     }
+  }
+
+  if (String(topic) == myLight -> getCommandTopic()){
+    myLight -> setStatus(messageTemp);
   }
 
   /* -------------------------- update device status -------------------------- */

@@ -15,7 +15,11 @@
 /*                                   Macros                                   */
 /* -------------------------------------------------------------------------- */
 #define LED 2
-#define SWITCH_PIN 12
+#define LED_RGB_R 32
+#define LED_RGB_G 33
+#define LED_RGB_B 25
+#define LED_CCT_C 18
+#define LED_CCT_W 19
 
 /* -------------------------------------------------------------------------- */
 /*                                Enumerations                                */
@@ -51,7 +55,9 @@ Device myIoTdevice;
 auto mySwitch = std::make_shared<Switch>("mySwitch", LED);
 auto mySensor = std::make_shared<Sensor>("mySensor", _HASSIO_DEVICE_CLASS_SENSOR_VOLTAGE);
 auto myAction = std::make_shared<Sensor>("Action");
-auto myLight = std::make_shared<Light>("myLight");
+// Assuming the pin assignments are as follows:
+ 
+auto myLight = std::make_shared<Light>("RGBWW_LED", LED_RGB_R, LED_RGB_G, LED_RGB_B, LED_CCT_C, LED_CCT_W);
 
 
 /* -------------------------------------------------------------------------- */

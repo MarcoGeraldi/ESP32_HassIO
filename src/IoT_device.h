@@ -73,10 +73,10 @@ protected:
     String payload_not_available = "offline";
 
     // The string that represents the off state. It will be compared to the message in the state_topic (see value_template for details)
-    String payload_off = "";
+    String payload_off = "OFF";
 
     // The string that represents the on state. It will be compared to the message in the state_topic (see value_template for details)
-    String payload_on = "";
+    String payload_on = "ON";
 
     // For sensors that only send on state updates (like PIRs), this variable sets a delay in seconds after which the sensor’s state will be updated back to off
     int off_delay = 0;
@@ -110,6 +110,8 @@ public:
     virtual void setStatus(bool valueToSet) {};
     virtual void setStatus(double valueToSet) {};
 
+    virtual void hw_init(){};
+
     // String getStatesJson();
     String generateUniqueID(const String &entityName, const String &deviceId);
     virtual void setStateTopic(const String &_stateTopic);
@@ -128,6 +130,7 @@ public:
     bool getTriggerFlag() { return trigger_flag; }
     void setDeviceClass(const char *_deviceClass);
     void setTriggerFlag(bool _triggerFlag) { trigger_flag = _triggerFlag; }
+
 };
 
 // Classe dispositivo (Device)
@@ -179,6 +182,7 @@ public:
     JsonDocument getConfigJson(JsonDocument &_entityConfig) override;
     void setStatus(bool valueToSet) override;
     String getStatus() override;
+    void hw_init() override;
 };
 
 class binarySensor : public Entity
@@ -193,6 +197,7 @@ public:
     JsonDocument getConfigJson(JsonDocument &_entityConfig) override;
     void setStatus(bool valueToSet) override;
     String getStatus() override;
+    void hw_init() override;
 };
 
 class Sensor : public Entity
@@ -228,22 +233,58 @@ public:
 class Light : public Entity {
     
   private:
-    bool brightness = true;
-    String schema  = "json";
+    bool brightness;
+    String schema;  
+    String color_mode;
     std::vector<const char*> supported_color_modes;
     int max_mireds = 500;
     int min_mireds = 142;
+    int color_temp;
+    int h =0;
+    int hue = 0;
+    int s=0; 
+    int saturation=0; 
+    float x=0;
+    float y=0;
+    int brightness_value=0;
 
-    uint8_t rgb_pins [3]; 
-    uint8_t CCT_pins [2];
+    float r_value=0, g_value=0, b_value=0;
+    float cct_cool_value=0, cct_warm_value=0;
 
+    uint8_t rgb_pins[3] = {0,0,0}; // RGB pins
+    uint8_t CCT_pins[2] = {0,0};     // CCT pins
+    uint8_t light_pin = 0; //Single color pin
+; 
   public:
+    // Base constructor
     Light(String _name);
+
+    // Single color light constructor
+    Light(String _name, uint8_t single_pin);
+
+    // CCT light constructor (using two separate uint8_t parameters for pins)
+    Light(String _name, uint8_t _CCTCoolPin, uint8_t _CCTWarmPin);
+
+    // RGB light constructor (using three separate uint8_t parameters for pins)
+    Light(String _name, uint8_t red_pin, uint8_t green_pin, uint8_t blue_pin);
+
+    // CCT + RGB light constructor (using five separate uint8_t parameters for pins)
+    Light(String _name, uint8_t red_pin, uint8_t green_pin, uint8_t blue_pin, uint8_t _CCTCoolPin, uint8_t _CCTWarmPin);
+
+
+    void hw_init() override;
 
     JsonDocument getConfigJson(JsonDocument &_entityConfig) override;
     void setStateTopic(const String &_stateTopic) override;
-    String getStatus() override;
+    void setStatus(const String &valueToSet) override;
+    
 
+    void setBrightness(uint8_t _level);
+    void setColorTemperature(int _mired);
+    void setRGB(int _rgb_r, int _rgb_g, int _rgb_b);
+
+    String getStatus() override;
+    
 };
 
 #endif
