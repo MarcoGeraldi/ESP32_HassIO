@@ -254,7 +254,7 @@ class Light : public Entity {
     uint8_t rgb_pins[3] = {0,0,0}; // RGB pins
     uint8_t CCT_pins[2] = {0,0};     // CCT pins
     uint8_t light_pin = 0; //Single color pin
-; 
+ 
   public:
     // Base constructor
     Light(String _name);

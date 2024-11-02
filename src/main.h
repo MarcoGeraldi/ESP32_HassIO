@@ -10,16 +10,20 @@
 #include "definitions.h"
 #include "iot_cli.h"
 #include "IoT_device.h"
-
+#include <WebServer_WT32_ETH01.h>
 /* -------------------------------------------------------------------------- */
 /*                                   Macros                                   */
 /* -------------------------------------------------------------------------- */
+#define DEBUG_ETHERNET_WEBSERVER_PORT Serial
+#define _ETHERNET_WEBSERVER_LOGLEVEL_ 3
+
 #define LED 2
-#define LED_RGB_R 32
-#define LED_RGB_G 33
-#define LED_RGB_B 25
-#define LED_CCT_C 18
-#define LED_CCT_W 19
+#define LED_RGB_R 4
+#define LED_RGB_G 12
+#define LED_RGB_B 14
+#define LED_CCT_C 15
+#define LED_CCT_W 17
+
 
 /* -------------------------------------------------------------------------- */
 /*                                Enumerations                                */
@@ -47,8 +51,11 @@ WiFiManagerParameter custom_mqtt_password("mqtt_password", "MQTT Password", mqtt
 Preferences preferences;
 
 /* ------------------------------- MQTT Client ------------------------------ */
-WiFiClient espClient;
-PubSubClient mqttClient(espClient);
+WiFiClient    espClient;
+PubSubClient  wifi_mqttClient(espClient);
+WiFiClient    ethClient;
+PubSubClient  eth_mqttClient(ethClient);
+
 
 /* ------------------------------- IoT Device ------------------------------- */
 Device myIoTdevice;
@@ -77,10 +84,11 @@ void saveConfigCallback();
 
 void MQTT_init();
 void MQTT_callback(char *topic, byte *message, unsigned int length);
-void MQTT_reconnect();
+void MQTT_reconnect(PubSubClient &_client);
 
 void IoT_device_init();
 int randomInt();
 bool randomBool();
+
 
 #endif

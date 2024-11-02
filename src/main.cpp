@@ -18,19 +18,49 @@ tinyCLI::Command commands[] = {
 // Initialize the command line interface
 tinyCLI commandLine(Serial, commands, sizeof(commands) / sizeof(commands[0]));
 
+void deviceUpdate()
+{
+  /* -------------------------- update device status -------------------------- */
+  if (eth_mqttClient.connected())
+  {
+    myIoTdevice.update(eth_mqttClient);
+  }
+  else if (wifi_mqttClient.connected())
+  {
+    myIoTdevice.update(wifi_mqttClient);
+  }
+  else
+  {
+    Serial.println("Client disconnected");
+  }
+}
+
 void setup()
 {
-
   /* --------------------- Initialize Serial Communication -------------------- */
   Serial.begin(115200);
-  
-  pinMode(LED, OUTPUT);
+
+  while (!Serial)
+    ;
+
+  Serial.print("\nStarting MQTTClient_Basic on " + String(ARDUINO_BOARD));
+  Serial.println(" with " + String(SHIELD_TYPE));
+  Serial.println(WEBSERVER_WT32_ETH01_VERSION);
+
+  /* --------------------------- initialize Ethernet -------------------------- */
+  // To be called before ETH.begin()
+  WT32_ETH01_onEvent();
+
+  ETH.begin(ETH_PHY_ADDR, ETH_PHY_POWER);
+
+  WT32_ETH01_waitForConnect();
 
   /* -------------------------- Initialize Parameters ------------------------- */
   preferences.begin("my-app", false);
 
   /* ------------------------ Initiliaze WiFi Settings ------------------------ */
   WiFi.mode(WIFI_STA); // explicitly set mode, esp defaults to STA+AP
+
   /* --------------------- Initialize WiFi Manager Object --------------------- */
   wm_init(false);
 
@@ -39,10 +69,21 @@ void setup()
 
   /* -------------------------- Initialize IoT Device ------------------------- */
   IoT_device_init();
+
+  // Allow the hardware to sort itself out
+  delay(1500);
 }
+
+
+unsigned long reconnectTimestamp = 0;   // Last reconnect attempt time
+unsigned long sensorUpdateTimestamp = 0; // Last sensor update time
+const unsigned long reconnectInterval = 5000; // Reconnect every 5000 ms
+const unsigned long sensorInterval = 1000;    // Update sensor every 1000 ms
 
 void loop()
 {
+
+  unsigned long currentMillis = millis();
 
   /* ----------------------- Process Command line inputs ---------------------- */
   commandLine.processInput();
@@ -51,34 +92,60 @@ void loop()
   wm.process();
 
   /* ------------------------- Connect to MQTT Broker ------------------------- */
-  if (WL_CONNECTED == WiFi.status())
+
+  if (WT32_ETH01_isConnected())
   {
-    /* --------------------- Try to reconnect to MQTT Broker -------------------- */
-    if (!mqttClient.connected())
+    if (!eth_mqttClient.connected())
     {
-      if (0 == (millis() % 5000) && timestamp != millis())
+      if (currentMillis - reconnectTimestamp >= reconnectInterval)
       {
-        MQTT_reconnect();
+        reconnectTimestamp = currentMillis;
+        Serial.println("Trying to reconnect via Ethernet..");
+        MQTT_reconnect(eth_mqttClient);
+
+        if (eth_mqttClient.connected())
+          wifi_mqttClient.disconnect();
       }
     }
     else
     {
-      /* ---------------------------- Publish MQTT Data --------------------------- */
-      mqttClient.loop();
+      //Nothing to do 
+    }
+  }
+  else if (WL_CONNECTED == WiFi.status())
+  {
+    /* --------------------- Try to reconnect to MQTT Broker -------------------- */
+    if (!wifi_mqttClient.connected())
+    {
+      if (currentMillis - reconnectTimestamp >= reconnectInterval)
+      {
+        reconnectTimestamp = currentMillis;
+        Serial.println("Trying to reconnect via WiFi..");
+        MQTT_reconnect(wifi_mqttClient);
+
+        if (wifi_mqttClient.connected())
+          eth_mqttClient.disconnect();
+      }
+    }
+    else
+    {
+      //Nothing to do 
     }
   }
 
-  if (0 == (millis() % 1000) && timestamp != millis())
+  if (currentMillis - sensorUpdateTimestamp >= sensorInterval)
   {
-
+    sensorUpdateTimestamp = currentMillis;
     mySensor->setStatus((double)rand());
-
-    myIoTdevice.update(mqttClient);
+    deviceUpdate();
   }
 
   /* ------------------------ update timestamp each ms ------------------------ */
   if (timestamp != millis())
     timestamp = millis();
+
+  eth_mqttClient.loop();
+  wifi_mqttClient.loop();
 
   /* -------------------------- Update MQTT Entities -------------------------- */
 }
@@ -95,10 +162,16 @@ void IoT_device_init()
 
   myIoTdevice.addEntity(myLight);
 
-  /* -------------------------- Configure IoT Device -------------------------- */
-  myIoTdevice.configure(mqttClient); // Update device configuration
-}
+  Serial.println("Device Init");
 
+  /* -------------------------- Configure IoT Device -------------------------- */
+  if (eth_mqttClient.connected())
+    myIoTdevice.configure(eth_mqttClient); // Update device configuration
+  else if (wifi_mqttClient.connected())
+    myIoTdevice.configure(wifi_mqttClient); // Update device configuration
+  else
+    Serial.println("Failed to send Device Configuration via MQTT. Client disconnected.");
+}
 
 void MQTT_callback(char *topic, byte *message, unsigned int length)
 {
@@ -133,17 +206,18 @@ void MQTT_callback(char *topic, byte *message, unsigned int length)
     }
   }
 
-  if (String(topic) == myLight -> getCommandTopic()){
-    myLight -> setStatus(messageTemp);
+  if (String(topic) == myLight->getCommandTopic())
+  {
+    myLight->setStatus(messageTemp);
   }
 
   /* -------------------------- update device status -------------------------- */
-  myIoTdevice.update(mqttClient);
+  deviceUpdate();
 }
 
-////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////
 
 void saveConfigCallback()
 {
@@ -174,11 +248,14 @@ void MQTT_init()
   custom_mqtt_user.setValue(_mqtt_user.c_str(), 128);
   custom_mqtt_password.setValue(_mqtt_password.c_str(), 128);
 
-  mqttClient.setServer(custom_mqtt_server.getValue(), 1883);
-  mqttClient.setCallback(MQTT_callback);
+  wifi_mqttClient.setServer(custom_mqtt_server.getValue(), 1883);
+  wifi_mqttClient.setCallback(MQTT_callback);
+  eth_mqttClient.setServer(custom_mqtt_server.getValue(), 1883);
+  eth_mqttClient.setCallback(MQTT_callback);
 
   /* ------------------------- Connect to MQTT Broker ------------------------- */
-  mqttClient.connect("ESP8266Client99", _mqtt_user.c_str(), _mqtt_password.c_str());
+  wifi_mqttClient.connect("ESP8266Client99", _mqtt_user.c_str(), _mqtt_password.c_str());
+  eth_mqttClient.connect("ESP8266Client99", _mqtt_user.c_str(), _mqtt_password.c_str());
 }
 
 void wm_init(bool _reset)
@@ -210,7 +287,7 @@ void wm_init(bool _reset)
   wm.setSaveParamsCallback(saveConfigCallback);
 }
 
-void MQTT_reconnect()
+void MQTT_reconnect(PubSubClient &_client)
 {
 
   /* ------------------------ Retrieve data from memory ----------------------- */
@@ -225,27 +302,26 @@ void MQTT_reconnect()
   _mqtt_port.trim();
   _mqtt_server.trim();
 
-  if (!mqttClient.connected())
+  if (!_client.connected())
   {
     Serial.println("Attempting MQTT connection...");
     // Attempt to connect
-    mqttClient.setServer(_mqtt_server.c_str(), _mqtt_port.toInt());
+    _client.setServer(_mqtt_server.c_str(), _mqtt_port.toInt());
 
-    if (mqttClient.connect("ESP8266Client99", _mqtt_user.c_str(), _mqtt_password.c_str()))
+    if (_client.connect("ESP8266Client99", _mqtt_user.c_str(), _mqtt_password.c_str()))
     {
       Serial.println("connected");
 
       /* --------------------- Update IoT Device configuration -------------------- */
-      myIoTdevice.configure(mqttClient); // Update device configuration
+      myIoTdevice.configure(_client); // Update device configuration
     }
     else
     {
       Serial.print("failed, rc=");
-      Serial.print(mqttClient.state());
+      Serial.print(_client.state());
     }
   }
 }
-
 
 int randomInt()
 {
@@ -256,3 +332,4 @@ bool randomBool()
 {
   return rand() % 2;
 }
+
