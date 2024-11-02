@@ -12,7 +12,6 @@ tinyCLI::Command commands[] = {
     {CLI_WIFI_CONFIG_PORTAL, "Enable Config Portal", cli_config_portal},
     {CLI_WIFI_SSID, "Set WiFi SSID", nullptr},
     {CLI_WIFI_PSWD, "Set WiFi Password", nullptr},
-
 };
 
 // Initialize the command line interface
@@ -47,6 +46,7 @@ void setup()
   Serial.println(" with " + String(SHIELD_TYPE));
   Serial.println(WEBSERVER_WT32_ETH01_VERSION);
 
+#ifdef ETHERNET_ENABLE 
   /* --------------------------- initialize Ethernet -------------------------- */
   // To be called before ETH.begin()
   WT32_ETH01_onEvent();
@@ -54,6 +54,7 @@ void setup()
   ETH.begin(ETH_PHY_ADDR, ETH_PHY_POWER);
 
   WT32_ETH01_waitForConnect();
+#endif 
 
   /* -------------------------- Initialize Parameters ------------------------- */
   preferences.begin("my-app", false);
