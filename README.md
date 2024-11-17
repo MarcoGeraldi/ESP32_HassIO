@@ -46,7 +46,7 @@ This project demonstrates how to use an ESP32 board as an MQTT client, allowing 
 To clone the repository, use the following command:
 
 ```bash
-git clone https://github.com/MarcoGerladi/ESP32MqttExample.git
+git clone https://github.com/MarcoGerladi/ESP32_HassIO.git
 ```
 
 ## Setting Up the Environment
