@@ -57,6 +57,13 @@ git clone https://github.com/MarcoGerladi/ESP32MqttExample.git
   - Preferences
 - Upload the code to your ESP32 board.
 
+## Flahing procedure
+The Code is compatibile with multiple development board, before flashing the software make sure to select the proper enviroment. 
+
+For this reason, go to platformIO and select the correspondent development board:
+
+![image](https://github.com/user-attachments/assets/51f8a1df-b895-4d76-b12f-69d333a1eee8)
+
 
 ## Usage
 
@@ -89,39 +96,105 @@ Use the serial monitor to access the CLI. Here are the available commands:
 
 ### MQTT Communication
 
-The ESP32 automatically connects to the MQTT Broker. In case the connection is lost, the ESP32 will retry to connect to the broker each 5s.
+The ESP32 automatically connects to the MQTT Broker. In case the connection is lost, the ESP32 will retry to connect to the broker.
 
-``` cpp
-      /* --------------------- Try to reconnect to MQTT Broker -------------------- */
-      if ( millis() - timestamp  > 5000) {
-          MQTT_reconnect();   
-          timestamp = millis();
-        }
-```
+If the board used has an ethernet interface, the connection automatically switches from WiFi to Ethernet and viceversa, giving priority to the ethernet connection.
 
 The ESP32 communicates with the MQTT broker by subscribing and publishing to specific topics.
 
-- Publish exmaple:
+### Device Definition
 
-Publish Topic: esp32/temperature
+The Library allows the user to define easily entities based on the official HomeAssistant documentation for MQTT Discovery (https://www.home-assistant.io/integrations/mqtt/).
 
-``` cpp   
-  /* ---------------------------- Publish MQTT Data --------------------------- */
-        mqttClient.loop();
-        mqttClient.publish("esp32/temperature", "19°C");
+First of all, define a `Device` object followed by all the `entities` that will be shared with home assistant. The `Device` object this will be responsible of the initialization and configuration of each entity.
+
+```cpp
+/* ------------------------------- IoT Device ------------------------------- */
+Device myIoTdevice;
+auto mySwitch = std::make_shared<Switch>("mySwitch", LED);
+auto mySensor = std::make_shared<Sensor>("mySensor", _HASSIO_DEVICE_CLASS_SENSOR_VOLTAGE);
+auto myAction = std::make_shared<Sensor>("Action");
+// Assuming the pin assignments are as follows:
+ 
+auto myLight = std::make_shared<Light>("RGBWW_LED", LED_RGB_R, LED_RGB_G, LED_RGB_B, LED_CCT_C, LED_CCT_W);
 ```
 
-![image](https://github.com/user-attachments/assets/1fdd8d23-f873-4f75-9cae-6246ab84fbb5)
+## Device Init
 
-- Subscribe Example:
+Home Assistant requires that all the entities send a configuration message, this is handled by the `Device` Class and for this reason the method `IoT_device_init()` in the main.cpp file have been added. In order to configure properly the device, just use the `addEntity()` method to include all the entities in the device object and then the `configure()` method to send the configuration message to the broker.
 
-  Subscribed Topic: esp32/output
+```cpp
+void IoT_device_init()
+{
+  /* ---------------- add all entities to the iot device object --------------- */
+  mySwitch->setDeviceClass(_HASSIO_DEVICE_CLASS_SWITCH_OUTLET);
 
-``` cpp   
-  mqttClient.subscribe("esp32/output");
+  myIoTdevice.addEntity(mySwitch);
+  myIoTdevice.addEntity(mySensor);
+  myIoTdevice.addEntity(myAction);
+  myIoTdevice.addEntity(myLight);
+
+  /* -------------------------- Configure IoT Device -------------------------- */
+  if (eth_mqttClient.connected()){
+    #ifdef ETHERNET_ENABLE 
+    myIoTdevice.configure(eth_mqttClient); // Update device configuration
+    #endif
+  }   
+  else if (wifi_mqttClient.connected()){
+    myIoTdevice.configure(wifi_mqttClient); // Update device configuration
+  }
+  else
+    Serial.println("Failed to send Device Configuration via MQTT. Client disconnected.");
+}
 ```
 
-![image](https://github.com/user-attachments/assets/36f3a5d6-16bf-4a17-a3b9-7b9900ce9dac)
+## Device Update
 
-![image](https://github.com/user-attachments/assets/3682e1e6-b96f-4894-93e9-7268c1fac371)
+It is up to the user to decide when to update the device data, usually this should be done:
+- periodically
+- on connection to the broker
+- when an input is received
+
+```cpp
+ if (currentMillis - sensorUpdateTimestamp >= sensorInterval)
+ {
+   sensorUpdateTimestamp = currentMillis;
+   mySensor->setStatus((double)rand());
+   deviceUpdate();
+ }
+```
+
+To update the information, simply use the `update` function of the device object 
+
+```cpp
+void deviceUpdate()
+{
+  /* -------------------------- update device status -------------------------- */
+  if (eth_mqttClient.connected())
+  {
+    myIoTdevice.update(eth_mqttClient);
+  }
+  else if (wifi_mqttClient.connected())
+  {
+    myIoTdevice.update(wifi_mqttClient);
+  }
+  else
+  {
+    //Serial.println("Client disconnected");
+  }
+}
+```
+
+### Update Entities
+Most of the entities update themselves automatically, but in case such as `sensor` entities, the value shall be updated by the user.
+
+## Home Assitant Discovery
+
+After flashing, make sure to configure propertly the credential of the MQTT broker, then if everything was set up correctly, you can navigate to your MQTT devices list and find the just created device
+
+![image](https://github.com/user-attachments/assets/c742efbe-7ccf-460f-861b-04eae12a9f71)
+
+![image](https://github.com/user-attachments/assets/e63f98da-6528-4356-ac75-e2d6601a31b8)
+
+
 
