@@ -4,6 +4,8 @@
 #include <cstdio>  // Per snprintf
 #include <cstdlib> // Per malloc
 
+#include "esp_mac.h"
+
 /* -------------------------------------------------------------------------- */
 /*                              HELPER FUNCTIONS                              */
 /* -------------------------------------------------------------------------- */
@@ -54,7 +56,20 @@ Device::Device()
     model = DEVICE_MODEL;
     name = DEVICE_NAME;
     sw_version = DEVICE_SW_VERS;
-    serial_number = DEVICE_SERIAL_NUMBER;
+    
+    /* -------------------------- Retrieve MAC Address -------------------------- */
+    uint8_t baseMac[6];
+    esp_err_t ret = esp_read_mac(baseMac, ESP_MAC_WIFI_STA);
+ 
+        // Convert the MAC address to a String
+    String macAddress = "0x";
+    for (int i = 0; i < 6; i++) {
+        macAddress += String(baseMac[i], 16); // Convert each byte to hexadecimal
+    }
+    macAddress.toLowerCase(); // Optional: Convert to uppercase for readability
+    
+    serial_number = macAddress;
+
     setStateTopic();
 }
 
@@ -138,6 +153,7 @@ String Device::getEntityConfigString(const std::shared_ptr<Entity> &entity)
 
 void Device::configure(PubSubClient &_mqttClient)
 {
+    _mqttClient.setBufferSize(MQTT_MAX_PACKET_SIZE);
 
     if (_mqttClient.connected())
     {

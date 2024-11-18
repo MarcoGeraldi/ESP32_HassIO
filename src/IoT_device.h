@@ -8,6 +8,8 @@
 
 #include "IoT_device_config.h"
 
+#define MQTT_MAX_PACKET_SIZE 1024
+
 // Classe base Entity
 class Entity
 {
