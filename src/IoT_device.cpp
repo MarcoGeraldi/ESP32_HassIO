@@ -4,8 +4,11 @@
 #include <cstdio>  // Per snprintf
 #include <cstdlib> // Per malloc
 
+#ifndef ESP8266
 #include "esp_mac.h"
-
+#else 
+#include <ESP8266WiFi.h>
+#endif
 /* -------------------------------------------------------------------------- */
 /*                              HELPER FUNCTIONS                              */
 /* -------------------------------------------------------------------------- */
@@ -57,6 +60,8 @@ Device::Device()
     name = DEVICE_NAME;
     sw_version = DEVICE_SW_VERS;
     
+    #ifndef ESP8266
+
     /* -------------------------- Retrieve MAC Address -------------------------- */
     uint8_t baseMac[6];
     esp_err_t ret = esp_read_mac(baseMac, ESP_MAC_WIFI_STA);
@@ -69,7 +74,20 @@ Device::Device()
     macAddress.toLowerCase(); // Optional: Convert to uppercase for readability
     
     serial_number = macAddress;
+    
+    #else
+    // Retrieve the MAC address
+    uint8_t mac[6];
+    WiFi.macAddress(mac);
 
+    // Convert to the desired format
+    char macFormatted[14]; // Space for "0x" + 12 characters + null terminator
+    snprintf(macFormatted, sizeof(macFormatted), "0x%02X%02X%02X%02X%02X%02X", 
+            mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+    serial_number = macFormatted;
+    
+    #endif
+    
     setStateTopic();
 }
 
