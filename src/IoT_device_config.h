@@ -57,7 +57,7 @@
 #define _HASSIO_ENTITY_TOPIC "topic"                                             // The MQTT topic subscribed to receive trigger events.
 #define _HASSIO_ENTITY_TYPE "type"                                               // The type of the trigger
 #define _HASSIO_ENTITY_SUBTYPE "subtype"                                         // The subtype of the trigger
-
+#define _HASSIO_ENTITY_PLATFORM "platform"
 /* ----------------------- Light Entity configuration ----------------------- */
 #define _HASSIO_ENTITY_LIGHT_SCHEMA_DEFAULT "default"
 #define _HASSIO_ENTITY_LIGHT_SCHEMA_JSON "json"
@@ -71,6 +71,16 @@
 #define _HASSIO_ENTITY_LIGHT_COLOR_MODE_RGBW "rgbw"
 #define _HASSIO_ENTITY_LIGHT_COLOR_MODE_RGBWW "rgbww"
 #define _HASSIO_ENTITY_LIGHT_COLOR_MODE_WHITE "white"
+
+/* ----------------------- Number Entity Configuration ---------------------- */
+#define _HASSIO_ENTITY_NUMBER_MIN "min"
+#define _HASSIO_ENTITY_NUMBER_MAX "max"
+#define _HASSIO_ENTITY_NUMBER_MODE "mode"
+#define _HASSIO_ENTITY_NUMBER_MODE_BOX "box"
+#define _HASSIO_ENTITY_NUMBER_MODE_SLIDER "slider"
+#define _HASSIO_ENTITY_NUMBER_PLATFORM "number"
+#define _HASSIO_ENTITY_NUMBER_STEP "step"
+
 
 /* -------------------------------------------------------------------------- */
 #define ENTITY_CATEGORY_DIAGNOSTIC "diagnostic"
@@ -209,6 +219,57 @@
 #define _HASSIO_DEVICE_CLASS_SENSOR_WEIGHT "weight"                                                     // Generic mass in kg, g, mg, µg, oz, lb, or st.
 #define _HASSIO_DEVICE_CLASS_SENSOR_WIND_SPEED "wind_speed"                                             // Wind speed in Beaufort, ft/s, km/h, kn, m/s, or mph.
 
+/* -------------------------- Device Class: Number -------------------------- */
+/* ----- https://www.home-assistant.io/integrations/number/#device-class ---- */
 
+#define _HASSIO_DEVICE_CLASS_NUMBER_NONE "none"                                                 // Generic number. This is the default and doesn’t need to be set.
+#define _HASSIO_DEVICE_CLASS_NUMBER_APPARENT_POWER "apparent_power"                             // Apparent power in VA.
+#define _HASSIO_DEVICE_CLASS_NUMBER_AQI "aqi"                                                   // Air Quality Index (unitless).
+#define _HASSIO_DEVICE_CLASS_NUMBER_AREA "area"                                                 // Area in m², cm², km², mm², in², ft², yd², mi², ac, ha.
+#define _HASSIO_DEVICE_CLASS_NUMBER_ATMOSPHERIC_PRESSURE "atmospheric_pressure"                 // Atmospheric pressure in cbar, bar, hPa, inHg, kPa, mbar, Pa, psi.
+#define _HASSIO_DEVICE_CLASS_NUMBER_BATTERY "battery"                                           // Percentage of battery that is left.
+#define _HASSIO_DEVICE_CLASS_NUMBER_BLOOD_GLUCOSE_CONCENTRATION "blood_glucose_concentration"   // Blood glucose concentration in mg/dL, mmol/L.
+#define _HASSIO_DEVICE_CLASS_NUMBER_CARBON_DIOXIDE "carbon_dioxide"                             // Carbon Dioxide concentration in CO2.
+#define _HASSIO_DEVICE_CLASS_NUMBER_CARBON_MONOXIDE "carbon_monoxide"                           // Carbon Monoxide concentration in CO.
+#define _HASSIO_DEVICE_CLASS_NUMBER_CURRENT "current"                                           // Current in A, mA.
+#define _HASSIO_DEVICE_CLASS_NUMBER_DATA_RATE "data_rate"                                       // Data rate in bit/s, kbit/s, Mbit/s, Gbit/s, B/s, kB/s, MB/s, GB/s, KiB/s, MiB/s, or GiB/s.
+#define _HASSIO_DEVICE_CLASS_NUMBER_DATA_SIZE "data_size"                                       // Data size in bit, kbit, Mbit, Gbit, B, kB, MB, GB, TB, PB, EB, ZB, YB, KiB, MiB, GiB, TiB, PiB, EiB, ZiB, or YiB.
+#define _HASSIO_DEVICE_CLASS_NUMBER_DISTANCE "distance"                                         // Generic distance in km, m, cm, mm, mi, yd, or in.
+#define _HASSIO_DEVICE_CLASS_NUMBER_ENERGY "energy"                                             // Energy in Wh, kWh, MWh, GWh, TWh, MJ, or GJ.
+#define _HASSIO_DEVICE_CLASS_NUMBER_ENERGY_STORAGE "energy_storage"                             // Stored energy in Wh, kWh, MWh, GWh, TWh, MJ, or GJ.
+#define _HASSIO_DEVICE_CLASS_NUMBER_FREQUENCY "frequency"                                       // Frequency in Hz, kHz, MHz, or GHz.
+#define _HASSIO_DEVICE_CLASS_NUMBER_GAS "gas"                                                   // Gas volume in m³, ft³, or CCF.
+#define _HASSIO_DEVICE_CLASS_NUMBER_HUMIDITY "humidity"                                         // Percentage of humidity in the air.
+#define _HASSIO_DEVICE_CLASS_NUMBER_ILLUMINANCE "illuminance"                                   // The current light level in lx.
+#define _HASSIO_DEVICE_CLASS_NUMBER_IRRADIANCE "irradiance"                                     // Irradiance in W/m² or BTU/(h⋅ft²).
+#define _HASSIO_DEVICE_CLASS_NUMBER_MOISTURE "moisture"                                         // Percentage of water in a substance.
+#define _HASSIO_DEVICE_CLASS_NUMBER_MONETARY "monetary"                                         // The monetary value.
+#define _HASSIO_DEVICE_CLASS_NUMBER_NITROGEN_DIOXIDE "nitrogen_dioxide"                         // Concentration of Nitrogen Dioxide in µg/m³.
+#define _HASSIO_DEVICE_CLASS_NUMBER_NITROGEN_MONOXIDE "nitrogen_monoxide"                       // Concentration of Nitrogen Monoxide in µg/m³.
+#define _HASSIO_DEVICE_CLASS_NUMBER_NITROUS_OXIDE "nitrous_oxide"                               // Concentration of Nitrous Oxide in µg/m³.
+#define _HASSIO_DEVICE_CLASS_NUMBER_OZONE "ozone"                                               // Concentration of Ozone in µg/m³.
+#define _HASSIO_DEVICE_CLASS_NUMBER_PH "ph"                                                     // Potential hydrogen (pH) value of a water solution.
+#define _HASSIO_DEVICE_CLASS_NUMBER_PM1 "pm1"                                                   // Concentration of particulate matter less than 1 micrometer in µg/m³.
+#define _HASSIO_DEVICE_CLASS_NUMBER_PM10 "pm10"                                                 // Concentration of particulate matter less than 10 micrometers in µg/m³.
+#define _HASSIO_DEVICE_CLASS_NUMBER_PM25 "pm25"                                                 // Concentration of particulate matter less than 2.5 micrometers in µg/m³.
+#define _HASSIO_DEVICE_CLASS_NUMBER_POWER_FACTOR "power_factor"                                 // Power factor (unitless), unit may be None or %.
+#define _HASSIO_DEVICE_CLASS_NUMBER_POWER "power"                                               // Power in W, kW, MW, GW, or TW.
+#define _HASSIO_DEVICE_CLASS_NUMBER_PRECIPITATION "precipitation"                               // Accumulated precipitation in cm, in, or mm.
+#define _HASSIO_DEVICE_CLASS_NUMBER_PRECIPITATION_INTENSITY "precipitation_intensity"           // Precipitation intensity in in/d, in/h, mm/d, or mm/h.
+#define _HASSIO_DEVICE_CLASS_NUMBER_PRESSURE "pressure"                                         // Pressure in Pa, kPa, hPa, bar, cbar, mbar, mmHg, inHg, or psi.
+#define _HASSIO_DEVICE_CLASS_NUMBER_REACTIVE_POWER "reactive_power"                             // Reactive power in var.
+#define _HASSIO_DEVICE_CLASS_NUMBER_SIGNAL_STRENGTH "signal_strength"                           // Signal strength in dB or dBm.
+#define _HASSIO_DEVICE_CLASS_NUMBER_SOUND_PRESSURE "sound_pressure"                             // Sound pressure in dB or dBA.
+#define _HASSIO_DEVICE_CLASS_NUMBER_SPEED "speed"                                               // Generic speed in ft/s, in/d, in/h, in/s, km/h, kn, m/s, mph, mm/d, or mm/s.
+#define _HASSIO_DEVICE_CLASS_NUMBER_SULPHUR_DIOXIDE "sulphur_dioxide"                           // Concentration of sulphur dioxide in µg/m³.
+#define _HASSIO_DEVICE_CLASS_NUMBER_TEMPERATURE "temperature"                                   // Temperature in °C, °F, or K.
+#define _HASSIO_DEVICE_CLASS_NUMBER_VOLATILE_ORGANIC_COMPOUNDS "volatile_organic_compounds"     // Concentration of volatile organic compounds in µg/m³.
+#define _HASSIO_DEVICE_CLASS_NUMBER_VOLTAGE "voltage"                                           // Voltage in V, mV, µV.
+#define _HASSIO_DEVICE_CLASS_NUMBER_VOLUME "volume"                                             // Generic volume in L, mL, gal, fl. oz., m³, ft³, or CCF.
+#define _HASSIO_DEVICE_CLASS_NUMBER_VOLUME_FLOW_RATE "volume_flow_rate"                         // Volume flow rate in m³/h, ft³/min, L/min, gal/min, or mL/s.
+#define _HASSIO_DEVICE_CLASS_NUMBER_VOLUME_STORAGE "volume_storage"                             // Generic stored volume in L, mL, gal, fl. oz., m³, ft³, or CCF.
+#define _HASSIO_DEVICE_CLASS_NUMBER_WATER "water"                                               // Water consumption in L, gal, m³, ft³, or CCF.
+#define _HASSIO_DEVICE_CLASS_NUMBER_WEIGHT "weight"                                             // Generic mass in kg, g, mg, µg, oz, lb, or st.
+#define _HASSIO_DEVICE_CLASS_NUMBER_WIND_SPEED "wind_speed"                                     // Wind speed in ft/s, km/h, kn, m/s, or mph.
 
 #endif

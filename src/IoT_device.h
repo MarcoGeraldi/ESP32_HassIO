@@ -107,10 +107,10 @@ public:
     // void assignValueVariable(float& externalValue);
 
     virtual String getStatus() { return state; }
-    virtual void setStatus(const String &valueToSet) {};
-    virtual void setStatus(int valueToSet) {};
-    virtual void setStatus(bool valueToSet) {};
-    virtual void setStatus(double valueToSet) {};
+    virtual void setStatus(const String &valueToSet) { state = valueToSet;};
+    virtual void setStatus(int valueToSet) {state = String(valueToSet);};
+    virtual void setStatus(bool valueToSet) {state = String(valueToSet);};
+    virtual void setStatus(double valueToSet) {state = String(valueToSet);};
 
     virtual void hw_init(){};
 
@@ -175,7 +175,7 @@ public:
 class Switch : public Entity
 {
 private:
-    uint8_t pin = -1;
+    uint8_t pin = 0;
 
 public:
     Switch(String _name);
@@ -287,6 +287,24 @@ class Light : public Entity {
 
     String getStatus() override;
     
+};
+
+class Number : public Entity{
+    private: ;
+        double min = 20;
+        double max = 50;
+        double step = 1;
+
+    public: 
+        Number(String _name);
+        Number(String _name, String _deviceClass);
+        
+        JsonDocument getConfigJson(JsonDocument &_entityConfig) override;
+        
+        void setMin(double _min){min = _min;};
+        void setMax(double _max){max = _max;};
+        void setStep(double _step){step = _step;};   
+        
 };
 
 #endif

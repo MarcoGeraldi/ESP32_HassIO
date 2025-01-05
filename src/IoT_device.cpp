@@ -278,6 +278,7 @@ void Entity::setDeviceClass(const char *_deviceClass)
 {
     device_class = _deviceClass;
 }
+
 /* -------------------------------------------------------------------------- */
 /*                                 LIGHT CLASS                                */
 /* -------------------------------------------------------------------------- */
@@ -651,8 +652,10 @@ void Switch::setStatus(bool valueToSet)
 {
 
     // Control output pin if it is defined
-    if (pin != -1)
+    if (pin != 0){
         digitalWrite(pin, valueToSet);
+    }
+        
 
     if (true == valueToSet)
         state = payload_on;
@@ -664,13 +667,17 @@ String Switch::getStatus()
 {
 
     // Read Status of the output pin if it is defined
-    if (pin != -1)
+    if (pin != 0){
         setStatus(digitalRead(pin));
+    }
+        
     return state;
 }
 
 void Switch::hw_init(){
-    pinMode(pin, OUTPUT);
+    if (pin != 0 ){
+        pinMode(pin, OUTPUT);
+    }
 }
 
 /* -------------------------------------------------------------------------- */
@@ -801,5 +808,33 @@ JsonDocument deviceTrigger::getConfigJson(JsonDocument &_entityConfig)
 }
 
 /* -------------------------------------------------------------------------- */
-/*                                BUTTON CLASS                                */
+/*                                NUMBER CLASS                                */
 /* -------------------------------------------------------------------------- */
+Number::Number(String _name)
+    : Entity(_name, _HASSIO_ENTITY_TYPE_NUMBER)
+{
+    device_class = _HASSIO_DEVICE_CLASS_NUMBER_NONE;
+    state = "25";
+}
+
+Number::Number(String _name, String _deviceClass)
+    : Entity(_name, _HASSIO_ENTITY_TYPE_NUMBER)
+{
+    device_class = _deviceClass;
+    state = "25";
+}
+
+JsonDocument Number::getConfigJson(JsonDocument &_entityConfig){
+    _entityConfig[_HASSIO_ENTITY_NAME] = name;
+    _entityConfig[_HASSIO_ENTITY_ENABLED_BY_DEFAULT] = enabled_by_default;
+    _entityConfig[_HASSIO_ENTITY_UNIQUE_ID] = unique_id;
+    _entityConfig[_HASSIO_ENTITY_STATE_TOPIC] = state_topic;
+    _entityConfig[_HASSIO_ENTITY_VALUE_TEMPLATE] = stringValueTemplate(name);
+    _entityConfig[_HASSIO_ENTITY_COMMAND_TOPIC] = command_topic;
+    _entityConfig[_HASSIO_ENTITY_DEVICE_CLASS] = device_class;
+    _entityConfig[_HASSIO_ENTITY_PLATFORM] = _HASSIO_ENTITY_NUMBER_PLATFORM;
+    _entityConfig[_HASSIO_ENTITY_NUMBER_STEP] = step;
+    _entityConfig[_HASSIO_ENTITY_NUMBER_MIN] = min;
+    _entityConfig[_HASSIO_ENTITY_NUMBER_MAX] = max;
+    return _entityConfig;
+}
